@@ -133,7 +133,7 @@ const sr: Strings = {
   partAFour: 'Deo A, četiri ili više od šest.',
   partAUnderFour: 'Deo A, manje od četiri od šest.',
   resultFraming:
-    'Ovo je WHO ASRS v1.1 upitnik za samoprocenu, prenet kako je objavljen. Nije dijagnoza i ne može je postaviti. Visok skor znači samo da pitanja vredi izneti lekaru. Softver oko upitnika nije klinički validiran.',
+    'Ovo je WHO ASRS v1.1 upitnik za samoprocenu, ovde u prevodu na srpski, ne u zvanično validovanoj verziji. Nije dijagnoza i ne može je postaviti. Visok skor znači samo da pitanja vredi izneti lekaru. Softver oko upitnika nije klinički validiran.',
   retake: 'popuni ponovo',
   earlier: 'ranije',
   statCompletion: 'završeno po dužini',
