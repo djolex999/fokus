@@ -26,6 +26,17 @@ export function report(message: string): void {
   void invoke('report', { message })
 }
 
+/** The tray menu is built in Rust before the webview exists, so it is told the
+ *  language once the widget knows it. */
+export async function setMenuLabels(labels: {
+  open: string
+  abandon: string
+  music: string
+  quit: string
+}): Promise<void> {
+  await invoke('set_menu_labels', labels)
+}
+
 /** Sound returns for every new session, so the tray's tick returns with it. */
 export async function resetMusic(): Promise<void> {
   await invoke('reset_music')

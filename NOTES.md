@@ -473,3 +473,36 @@ Two consequences accepted: Cmd+Q now quits, bypassing the clean session close th
 tray does, which is survivable only because session resume landed first; and the
 app takes an app switcher slot despite being driven by a global shortcut and a
 tray.
+
+---
+
+## English, and why there is still no language switch
+
+Added 2026-09-10, ahead of open sourcing. `CLAUDE.md` said Serbian because this
+was one person's tool; a public app needs English, which is a different question
+from the toggle that was raised and dropped earlier.
+
+The design that needs no switch is to follow the system language. No settings
+surface, so the forbidden features line stands, and `CLAUDE.md` has been amended
+at the copy rule rather than left contradicting the app.
+
+**A wrong turn worth keeping the record of.** The first rule read the primary
+language only. This machine reports `("en-US", "sr-Latn-US", "sr-US")`, so it
+would have switched its owner's own daily tool to English on the morning he
+planned to use it, silently. The rule was widened to "Serbian if Serbian appears
+anywhere in the list", which protected him. He then said he wanted English. The
+widening was solving a problem he did not have, so it went back to the primary
+entry: a system set to English is a person telling you they want English, and a
+second entry in the list is not a contradiction of that.
+
+**A side benefit for the screener.** In English the questions are the official
+WHO wording, so an English reader gets the validated instrument rather than a
+translation, and the printed page drops the translation caveat because there is
+no translation to caveat. That removes part of the first blocker on distributing
+this: Serbian readers still get my translation with the original underneath, but
+nobody else is handed an unvalidated instrument.
+
+Checked by a test rather than by reading: both tables have identical keys, no
+value is empty, no English value is still the Serbian one except the two words
+that are legitimately the same, and every `{placeholder}` survives translation in
+both tables, since a lost one silently removes a number from the UI.

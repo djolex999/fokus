@@ -3,20 +3,21 @@ import { listen } from '@tauri-apps/api/event'
 import { pendingCaptures, resolveCapture } from '../lib/db'
 import type { PendingCapture, Resolution } from '../lib/db'
 import { failure } from '../lib/ipc'
+import { DATE_LOCALE, t } from '../lib/i18n'
 
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 
 const ACTIONS: Array<{ resolution: Resolution; label: string }> = [
-  { resolution: 'done', label: 'uradi' },
-  { resolution: 'scheduled', label: 'zakaži' },
-  { resolution: 'deleted', label: 'obriši' },
+  { resolution: 'done', label: t.resolveDone },
+  { resolution: 'scheduled', label: t.resolveScheduled },
+  { resolution: 'deleted', label: t.resolveDelete },
 ]
 
 function formatTime(iso: string): string {
   const parsed = new Date(iso)
   if (Number.isNaN(parsed.getTime())) return ''
   // Stored as UTC, shown local.
-  return parsed.toLocaleString('sr-Latn', {
+  return parsed.toLocaleString(DATE_LOCALE, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
@@ -33,7 +34,7 @@ export function ReviewList(): JSX.Element {
       setRows(await pendingCaptures())
       setError(null)
     } catch (e: unknown) {
-      setError(failure('ne mogu da učitam', e))
+      setError(failure(t.errCannotLoad, e))
     }
   }, [])
 
@@ -56,7 +57,7 @@ export function ReviewList(): JSX.Element {
       try {
         await resolveCapture(id, resolution)
       } catch (e: unknown) {
-        setError(failure('nije sačuvano', e))
+        setError(failure(t.errNotSaved, e))
         await refresh()
       }
     },
@@ -70,14 +71,14 @@ export function ReviewList(): JSX.Element {
   return (
     <div className="screen">
       <header className="header">
-        <h1>zapisano</h1>
+        <h1>{t.tabCaptures}</h1>
         <span className="count">{rows.length}</span>
       </header>
 
       {error !== null && <p className="error">{error}</p>}
 
       {rows.length === 0 ? (
-        <p className="empty">nema ništa</p>
+        <p className="empty">{t.nothingPending}</p>
       ) : (
         <ul className="rows">
           {rows.map((row) => (

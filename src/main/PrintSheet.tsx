@@ -1,8 +1,8 @@
-import { PART_A_THRESHOLD } from '../types/asrs'
 import type { Stats as StatsData } from '../types/stats'
 import type { AsrsRecord } from '../lib/db'
 import { StatsBody } from './Stats'
 import { formatDate } from './format'
+import { fill, t } from '../lib/i18n'
 
 /**
  * One page, for handing to a psychiatrist. Hidden on screen, laid out for paper
@@ -18,7 +18,7 @@ export function PrintSheet({
 }): JSX.Element {
   const range =
     stats !== null && stats.firstSession !== null && stats.lastSession !== null
-      ? `${formatDate(stats.firstSession)} do ${formatDate(stats.lastSession)}`
+      ? `${formatDate(stats.firstSession)} ${t.printRange} ${formatDate(stats.lastSession)}`
       : null
 
   return (
@@ -29,30 +29,25 @@ export function PrintSheet({
       </header>
 
       <section>
-        <h2>ASRS v1.1, deo A</h2>
+        <h2>{t.printAsrsHeading}</h2>
         {asrs === null ? (
-          <p>Upitnik nije popunjen.</p>
+          <p>{t.printNoAsrs}</p>
         ) : (
           <>
             <p className="print-score">
               {asrs.part_a_score} od 6 &middot; {formatDate(asrs.taken_at)}
             </p>
-            <p>
-              {asrs.part_a_score >= PART_A_THRESHOLD ? 'Četiri ili više' : 'Manje od četiri'} od
-              šest stavki u osenčenom opsegu.
-            </p>
-            <p className="print-note">
-              Upitnik za probir, ne dijagnoza. Ne postavlja dijagnozu i ne isključuje je. Stavke su
-              date u prevodu na srpski, ne u zvaničnoj validovanoj verziji.
-            </p>
+            <p>{fill(t.printShaded, { n: asrs.part_a_score })}</p>
+            {/* The translation caveat belongs only where a translation was used. */}
+            <p className="print-note">{t.printNote}</p>
           </>
         )}
       </section>
 
       <section>
-        <h2>Sesije</h2>
+        <h2>{t.printSessionsHeading}</h2>
         {stats === null || stats.sessionCount === 0 ? (
-          <p>Nema sesija.</p>
+          <p>{t.printNoSessions}</p>
         ) : (
           <StatsBody stats={stats} />
         )}

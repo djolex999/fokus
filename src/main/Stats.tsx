@@ -4,18 +4,8 @@ import type { Stats as StatsData } from '../types/stats'
 import { emit } from '@tauri-apps/api/event'
 import { allCaptureTimes, allSessions, clearAllSessions } from '../lib/db'
 import { failure } from '../lib/ipc'
+import { fill, sessionsWord, t } from '../lib/i18n'
 import { formatDate } from './format'
-
-/** Serbian counts by the last digit, except in the teens: 1 sesija, 2 do 4
- *  sesije, 5 and up sesija, and 11 to 14 back to sesija. */
-function pluralSessions(count: number): string {
-  const lastTwo = count % 100
-  if (lastTwo >= 11 && lastTwo <= 14) return 'sesija'
-  const last = count % 10
-  if (last === 1) return 'sesija'
-  if (last >= 2 && last <= 4) return 'sesije'
-  return 'sesija'
-}
 
 export function Stats(): JSX.Element {
   const [stats, setStats] = useState<StatsData | null>(null)
@@ -26,7 +16,7 @@ export function Stats(): JSX.Element {
       const [sessions, captures] = await Promise.all([allSessions(), allCaptureTimes()])
       setStats(computeStats(sessions, captures, new Date()))
     } catch (e: unknown) {
-      setError(failure('ne mogu da učitam', e))
+      setError(failure(t.errCannotLoad, e))
     }
   }, [])
 
@@ -42,13 +32,12 @@ export function Stats(): JSX.Element {
     return (
       <div>
         <header className="header">
-          <h1>statistika</h1>
+          <h1>{t.tabStats}</h1>
           <span className="count">{stats.sessionCount}</span>
         </header>
         {/* A count, not a nudge. It says what is missing and nothing about you. */}
         <p className="empty">
-          Treba još {remaining} {pluralSessions(remaining)} pre nego što brojevi počnu da znače
-          nešto.
+          {fill(t.notEnoughSessions, { n: `${remaining} ${sessionsWord(remaining)}` })}
         </p>
         {stats.sessionCount > 0 && <ClearSessions onCleared={load} />}
       </div>
@@ -58,10 +47,10 @@ export function Stats(): JSX.Element {
   return (
     <div>
       <header className="header">
-        <h1>statistika</h1>
+        <h1>{t.tabStats}</h1>
         <span className="count">
           {stats.firstSession !== null && stats.lastSession !== null
-            ? `${formatDate(stats.firstSession)} do ${formatDate(stats.lastSession)}`
+            ? `${formatDate(stats.firstSession)} ${t.printRange} ${formatDate(stats.lastSession)}`
             : ''}
         </span>
       </header>
@@ -93,7 +82,7 @@ function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.E
       // foreign key pointing at a deleted row.
       void emit('sessions:cleared')
     } catch (e: unknown) {
-      setError(failure('nije obrisano', e))
+      setError(failure(t.errNotDeleted, e))
     }
   }, [onCleared])
 
@@ -102,17 +91,17 @@ function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.E
       {error !== null && <p className="error">{error}</p>}
       {confirming ? (
         <>
-          <span className="clear-warning">briše i sve zapisano, ne i upitnik</span>
+          <span className="clear-warning">{t.clearWarning}</span>
           <button type="button" className="clear-confirm" onClick={() => void clear()}>
-            obriši
+            {t.clearConfirm}
           </button>
           <button type="button" onClick={() => setConfirming(false)}>
-            otkaži
+            {t.clearCancel}
           </button>
         </>
       ) : (
         <button type="button" onClick={() => setConfirming(true)}>
-          obriši sve sesije
+          {t.clearSessions}
         </button>
       )}
     </div>
@@ -127,13 +116,15 @@ export function StatsBody({ stats }: { stats: StatsData }): JSX.Element {
   return (
     <>
       <section className="stat">
-        <h2>završeno po dužini</h2>
+        <h2>{t.statCompletion}</h2>
         <ul className="bars">
           {stats.byDuration.map((row) => {
             const rate = row.total === 0 ? 0 : row.completed / row.total
             return (
               <li key={row.plannedMin}>
-                <span className="bar-label">{row.plannedMin} min</span>
+                <span className="bar-label">
+                  {row.plannedMin} {t.minutes}
+                </span>
                 <span className="bar-track">
                   <span className="bar-fill" style={{ width: `${rate * 100}%` }} />
                 </span>
@@ -147,21 +138,21 @@ export function StatsBody({ stats }: { stats: StatsData }): JSX.Element {
       </section>
 
       <section className="stat">
-        <h2>prekid</h2>
+        <h2>{t.statAbandon}</h2>
         <p className="figure">
           {stats.medianAbandonMinutes === null
-            ? 'nema prekinutih sesija'
-            : `${Math.round(stats.medianAbandonMinutes)} min do prekida, medijana`}
+            ? t.noAbandoned
+            : fill(t.medianAbandon, { n: Math.round(stats.medianAbandonMinutes) })}
         </p>
       </section>
 
       <section className="stat">
-        <h2>povrataka po sesiji</h2>
+        <h2>{t.statCapturesPerSession}</h2>
         <p className="figure">{stats.capturesPerSession.toFixed(1)}</p>
       </section>
 
       <section className="stat">
-        <h2>po dobu dana</h2>
+        <h2>{t.statTimeOfDay}</h2>
         <ul className="hours">
           {stats.byHour.map((row) => (
             <li key={row.hour}>
@@ -182,15 +173,15 @@ export function StatsBody({ stats }: { stats: StatsData }): JSX.Element {
         {/* Named with swatches rather than by brightness: which of two greys is
             "light" is not something a legend should ask the reader to decide. */}
         <p className="legend">
-          <span className="swatch swatch-started" /> počelo
-          <span className="swatch swatch-abandoned" /> prekinuto
+          <span className="swatch swatch-started" /> {t.legendStarted}
+          <span className="swatch swatch-abandoned" /> {t.legendAbandoned}
         </p>
       </section>
 
       <section className="stat">
-        <h2>povratci</h2>
+        <h2>{t.statReturns}</h2>
         <p className="figure">
-          {stats.returnsThisWeek} ove nedelje, {stats.returnsLastWeek} prošle
+          {fill(t.returnsWeek, { a: stats.returnsThisWeek, b: stats.returnsLastWeek })}
         </p>
       </section>
     </>

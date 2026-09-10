@@ -10,6 +10,7 @@ import type { Answer, Answers } from '../types/asrs'
 import { asrsHistory, saveAsrs } from '../lib/db'
 import type { AsrsRecord } from '../lib/db'
 import { failure } from '../lib/ipc'
+import { LOCALE, fill, t } from '../lib/i18n'
 import { formatDate } from './format'
 
 type View = { kind: 'form'; answers: Answers } | { kind: 'result'; record: AsrsRecord }
@@ -26,7 +27,7 @@ export function Asrs(): JSX.Element {
       const latest = records[0]
       if (latest !== undefined) setView({ kind: 'result', record: latest })
     } catch (e: unknown) {
-      setError(failure('ne mogu da učitam', e))
+      setError(failure(t.errCannotLoad, e))
     }
   }, [])
 
@@ -41,7 +42,7 @@ export function Asrs(): JSX.Element {
         await refresh()
         window.scrollTo(0, 0)
       } catch (e: unknown) {
-        setError(failure('nije sačuvano', e))
+        setError(failure(t.errNotSaved, e))
       }
     },
     [refresh],
@@ -87,15 +88,13 @@ function Form({
   return (
     <div>
       <header className="header">
-        <h1>upitnik</h1>
+        <h1>{t.tabQuestionnaire}</h1>
         <span className="count">
           {answered} / {QUESTIONS.length}
         </span>
       </header>
 
-      <p className="lede">
-        ASRS v1.1. Odgovaraj na osnovu poslednjih šest meseci.
-      </p>
+      <p className="lede">{t.questionnaireLede}</p>
 
       {error !== null && <p className="error">{error}</p>}
 
@@ -104,16 +103,15 @@ function Form({
           <li key={question.number} className="question">
             <div className="question-text">
               <span className="question-number">{question.number}.</span>
-              {question.text}
+              {LOCALE === 'sr' ? question.text : question.original}
             </div>
             {/*
-              The original wording, kept visible under the translation. This is a
-              clinical instrument answered through a translation that is mine and
-              not the validated Serbian version, and the difference between an
-              ASRS score and an approximation of one is whether the person
-              answering could check what was actually asked.
+              Shown only in Serbian, where the question above it is a translation
+              of mine rather than the validated instrument. In English the
+              official wording is already the question, so there is nothing to
+              check it against.
             */}
-            <div className="question-original">{question.original}</div>
+            {LOCALE === 'sr' && <div className="question-original">{question.original}</div>}
             <div className="scale">
               {SCALE.map((option) => {
                 const selected = answers[question.number] === option.value
@@ -135,9 +133,11 @@ function Form({
 
       <div className="actions">
         <button type="button" className="primary" disabled={!complete} onClick={onSubmit}>
-          sačuvaj
+          {t.save}
         </button>
-        {!complete && <span className="meta">ostalo {QUESTIONS.length - answered}</span>}
+        {!complete && (
+          <span className="meta">{fill(t.remaining, { n: QUESTIONS.length - answered })}</span>
+        )}
       </div>
     </div>
   )
@@ -157,7 +157,7 @@ function Result({
   return (
     <div>
       <header className="header">
-        <h1>upitnik</h1>
+        <h1>{t.tabQuestionnaire}</h1>
         <span className="count">{formatDate(record.taken_at)}</span>
       </header>
 
@@ -165,11 +165,10 @@ function Result({
 
       <div className="score">
         <span className="score-value">{record.part_a_score}</span>
-        <span className="score-of">od 6</span>
+        <span className="score-of">{t.outOfSix}</span>
       </div>
       <p className="meta">
-        Deo A, {record.part_a_score >= PART_A_THRESHOLD ? 'četiri ili više' : 'manje od četiri'} od
-        šest.
+        {record.part_a_score >= PART_A_THRESHOLD ? t.partAFour : t.partAUnderFour}
       </p>
 
       {/*
@@ -180,21 +179,19 @@ function Result({
         either.
       */}
       <div className="framing">
-        <p>
-          Ovo je upitnik za probir, ne dijagnoza. Ne može da postavi dijagnozu i ne isključuje je.
-        </p>
-        <p>Odnesi rezultat psihijatru.</p>
+        <p>{t.framingNotDiagnosis}</p>
+        <p>{t.framingTakeIt}</p>
       </div>
 
       <div className="actions">
         <button type="button" onClick={onRetake}>
-          popuni ponovo
+          {t.retake}
         </button>
       </div>
 
       {history.length > 1 && (
         <div className="history">
-          <h2>ranije</h2>
+          <h2>{t.earlier}</h2>
           <ul>
             {history.slice(1).map((entry) => (
               <li key={entry.id}>

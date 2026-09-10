@@ -26,6 +26,7 @@ import {
   startSession,
   touchSession,
 } from '../lib/db'
+import { fill, t } from '../lib/i18n'
 import {
   audioTrack,
   describeError,
@@ -35,6 +36,7 @@ import {
   report,
   resetMusic,
   restoreFocus,
+  setMenuLabels,
   setWidgetHeight,
 } from '../lib/ipc'
 
@@ -169,6 +171,13 @@ export function CaptureWidget(): JSX.Element {
 
   useEffect(() => {
     const prepare = async (): Promise<void> => {
+      setMenuLabels({
+        open: t.trayOpen,
+        abandon: t.trayAbandon,
+        music: t.trayMusic,
+        quit: t.trayQuit,
+      }).catch((e: unknown) => report(`could not set menu labels: ${describeError(e)}`))
+
       await openDatabase()
 
       // A session outlives the process that was timing it. Quitting at minute
@@ -204,7 +213,7 @@ export function CaptureWidget(): JSX.Element {
         dispatch({ type: 'warmStart', task: previous.task, plannedMin: previous.plannedMin })
       }
     }
-    prepare().catch((e: unknown) => setError(failure('baza nije otvorena', e)))
+    prepare().catch((e: unknown) => setError(failure(t.errDatabase, e)))
   }, [startAudio])
 
   // --- session lifecycle -------------------------------------------------
@@ -213,7 +222,7 @@ export function CaptureWidget(): JSX.Element {
     try {
       await restoreFocus()
     } catch (e: unknown) {
-      setError(failure('fokus nije vraćen', e))
+      setError(failure(t.errFocusNotReturned, e))
     }
   }, [])
 
@@ -234,7 +243,7 @@ export function CaptureWidget(): JSX.Element {
       try {
         await endSession(session, outcome)
       } catch (e: unknown) {
-        setError(failure('sesija nije zatvorena', e))
+        setError(failure(t.errSessionNotClosed, e))
       }
     },
     [stopAudio],
@@ -370,7 +379,7 @@ export function CaptureWidget(): JSX.Element {
       try {
         dispatch({ type: 'sessionStarted', session: await startSession(task, plannedMin) })
       } catch (e: unknown) {
-        setError(failure('sesija nije počela', e))
+        setError(failure(t.errSessionNotStarted, e))
         return
       }
       void mark('session started')
@@ -396,7 +405,7 @@ export function CaptureWidget(): JSX.Element {
       } catch (e: unknown) {
         // Deliberately does not return focus. The text is still in the input,
         // and losing it silently is worse than the interruption of noticing.
-        setError(failure('nije sačuvano', e))
+        setError(failure(t.errNotSaved, e))
         return
       }
       void mark('row inserted')
@@ -508,7 +517,7 @@ function renderBody(
             className="capture-input"
             type="text"
             value={state.draft}
-            placeholder="na čemu radiš"
+            placeholder={t.taskPlaceholder}
             spellCheck={false}
             autoComplete="off"
             onChange={onChange}
@@ -522,10 +531,10 @@ function renderBody(
             exists to remove.
           */}
           <div className="durations" data-tauri-drag-region>
-            <span className="mode">nova sesija</span>
+            <span className="mode">{t.newSession}</span>
             <span className={state.plannedMin === 25 ? 'duration active' : 'duration'}>25</span>
             <span className={state.plannedMin === 50 ? 'duration active' : 'duration'}>50</span>
-            <span className="duration-hint">tab</span>
+            <span className="duration-hint">{t.durationHint}</span>
           </div>
         </>
       )
@@ -550,7 +559,7 @@ function renderBody(
             className="capture-input"
             type="text"
             value={state.draft}
-            placeholder="zapiši misao"
+            placeholder={t.capturePlaceholder}
             spellCheck={false}
             autoComplete="off"
             onChange={onChange}
@@ -570,7 +579,7 @@ function renderBody(
             className="capture-input"
             type="text"
             value=""
-            placeholder="zapiši misao"
+            placeholder={t.capturePlaceholder}
             spellCheck={false}
             autoComplete="off"
             onChange={onChange}
@@ -593,7 +602,7 @@ function renderBody(
       return (
         <>
           <div className="confirmed" data-tauri-drag-region>
-            {state.returnNumber}. povratak
+            {fill(t.returnCount, { n: state.returnNumber })}
           </div>
           <div className="secondary" data-tauri-drag-region>
             {formatCountdown(remainingSeconds(state.session, now))} · {state.session.task}

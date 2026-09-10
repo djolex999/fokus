@@ -34,7 +34,10 @@ const AUDIO_EXTENSIONS: [&str; 6] = ["mp3", "m4a", "aac", "wav", "aiff", "flac"]
 /// The tray's music item, kept so its tick can be corrected when a new session
 /// turns the music back on.
 struct TrayItems {
+    open: MenuItem<tauri::Wry>,
+    abandon: MenuItem<tauri::Wry>,
     music: CheckMenuItem<tauri::Wry>,
+    quit: MenuItem<tauri::Wry>,
 }
 
 #[derive(Default)]
@@ -124,7 +127,12 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let music = CheckMenuItem::with_id(app, "music", "Muzika", true, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &abandon, &music, &quit])?;
-    app.manage(TrayItems { music });
+    app.manage(TrayItems {
+        open: open.clone(),
+        abandon: abandon.clone(),
+        music: music.clone(),
+        quit: quit.clone(),
+    });
 
     // A dedicated template image rather than the app icon: macOS tints template
     // images to match the menu bar, and the app icon is an opaque rounded
@@ -232,6 +240,25 @@ fn set_widget_height(app: AppHandle, height: f64) -> Result<(), String> {
         .map_err(|e| format!("could not re-anchor widget: {e}"))
 }
 
+/// The menu is built before the webview exists, so it starts in Serbian and the
+/// widget corrects it once it knows the system language. Rust could read the
+/// locale itself, but only by taking on a crate to do it, and the webview
+/// already knows.
+#[tauri::command]
+fn set_menu_labels(
+    app: AppHandle,
+    open: String,
+    abandon: String,
+    music: String,
+    quit: String,
+) -> Result<(), String> {
+    let items = app.state::<TrayItems>();
+    items.open.set_text(open).map_err(|e| e.to_string())?;
+    items.abandon.set_text(abandon).map_err(|e| e.to_string())?;
+    items.music.set_text(music).map_err(|e| e.to_string())?;
+    items.quit.set_text(quit).map_err(|e| e.to_string())
+}
+
 /// Called when a session starts. Sound comes back for every new session, so the
 /// tick has to come back with it.
 #[tauri::command]
@@ -330,6 +357,7 @@ pub fn run() {
             restore_focus,
             quit_app,
             reset_music,
+            set_menu_labels,
             audio_track,
             set_widget_height
         ])

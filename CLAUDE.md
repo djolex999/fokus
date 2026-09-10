@@ -90,7 +90,11 @@ type CaptureState =
 
 ## Copy
 
-All UI text in Serbian (Latin), informal second person, matching the tone of the concept note. Terse. No exclamation marks, no encouragement, no emoji.
+Serbian (Latin) and English, chosen by the system language, primary entry only. No switch: a switch would be a setting, and those are still forbidden. Both tables live in `src/lib/i18n.ts` and are typed identically, so a missing string is a compile error.
+
+Informal second person, matching the tone of the concept note. Terse. No exclamation marks, no encouragement, no emoji.
+
+The ASRS items are the exception to "translate everything": in English the official WHO wording *is* the question, so nothing is shown beneath it. In Serbian the question is a translation of mine, so the original stays visible underneath and the printed page says so.
 
 Never use em dashes in UI copy or docs. Commas, periods, or parentheses.
 
