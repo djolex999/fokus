@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { pendingCaptures, resolveCapture } from '../lib/db'
 import type { PendingCapture, Resolution } from '../lib/db'
-import { describeError } from '../lib/ipc'
+import { failure } from '../lib/ipc'
 
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 
@@ -33,7 +33,7 @@ export function ReviewList(): JSX.Element {
       setRows(await pendingCaptures())
       setError(null)
     } catch (e: unknown) {
-      setError(describeError(e))
+      setError(failure('ne mogu da učitam', e))
     }
   }, [])
 
@@ -56,7 +56,7 @@ export function ReviewList(): JSX.Element {
       try {
         await resolveCapture(id, resolution)
       } catch (e: unknown) {
-        setError(describeError(e))
+        setError(failure('nije sačuvano', e))
         await refresh()
       }
     },
@@ -77,7 +77,7 @@ export function ReviewList(): JSX.Element {
       {error !== null && <p className="error">{error}</p>}
 
       {rows.length === 0 ? (
-        <p className="empty">Nema ništa za pregled.</p>
+        <p className="empty">nema ništa</p>
       ) : (
         <ul className="rows">
           {rows.map((row) => (

@@ -19,6 +19,15 @@ export async function quitApp(): Promise<void> {
   await invoke('quit_app')
 }
 
+/**
+ * Frames a failure in the app's language while keeping the driver's own text.
+ * The detail is English and stays English: it is diagnostic, and translating or
+ * dropping it would cost the only information worth having when something breaks.
+ */
+export function failure(what: string, error: unknown): string {
+  return `${what}: ${describeError(error)}`
+}
+
 export function describeError(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error

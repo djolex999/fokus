@@ -18,7 +18,7 @@ import {
   startSession,
   touchSession,
 } from '../lib/db'
-import { describeError, mark, quitApp, restoreFocus } from '../lib/ipc'
+import { describeError, failure, mark, quitApp, restoreFocus } from '../lib/ipc'
 
 const SHORTCUT_EVENT = 'capture:open'
 const ABANDON_EVENT = 'session:abandon'
@@ -49,7 +49,7 @@ export function CaptureWidget(): JSX.Element {
         console.info(`closed ${closed} session(s) left open by a previous run`)
       }
     }
-    prepare().catch((e: unknown) => setError(describeError(e)))
+    prepare().catch((e: unknown) => setError(failure('baza nije otvorena', e)))
   }, [])
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function CaptureWidget(): JSX.Element {
     try {
       await restoreFocus()
     } catch (e: unknown) {
-      setError(describeError(e))
+      setError(failure('fokus nije vraćen', e))
     }
   }, [])
 
@@ -71,7 +71,7 @@ export function CaptureWidget(): JSX.Element {
       try {
         await endSession(session.id, outcome)
       } catch (e: unknown) {
-        setError(describeError(e))
+        setError(failure('sesija nije zatvorena', e))
       }
     },
     [],
@@ -146,7 +146,7 @@ export function CaptureWidget(): JSX.Element {
       try {
         dispatch({ type: 'sessionStarted', session: await startSession(task, plannedMin) })
       } catch (e: unknown) {
-        setError(describeError(e))
+        setError(failure('sesija nije počela', e))
         return
       }
       void mark('session started')
@@ -168,7 +168,7 @@ export function CaptureWidget(): JSX.Element {
       } catch (e: unknown) {
         // Deliberately does not return focus. The text is still in the input,
         // and losing it silently is worse than the interruption of noticing.
-        setError(describeError(e))
+        setError(failure('nije sačuvano', e))
         return
       }
       void mark('row inserted')

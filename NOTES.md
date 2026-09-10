@@ -169,3 +169,18 @@ Countdown maths checked directly against `remainingSeconds` and
 moved backwards returns more time rather than crashing.
 
 The interactive acceptance list is not yet run.
+
+### Language: Serbian only, settled
+
+A Serbian/English toggle was raised and dropped on 2026-09-10. It contradicted
+two lines in `CLAUDE.md` at once: the copy rule that all UI text is Serbian
+(Latin), and the forbidden features list, which rules out settings beyond a
+shortcut remap. A toggle is both a settings surface and a second copy set to keep
+in sync forever. Recorded here so it does not get re-raised as a fresh idea.
+
+Consequence handled at the same time: errors used to render the raw driver
+message, so a failure surfaced bare English with no indication of what had
+failed. Each one is now framed in Serbian at the point it is raised, with the
+driver's own text kept after it. The detail stays English on purpose; it is
+diagnostic, and translating or dropping it would lose the only information worth
+having when something breaks.
