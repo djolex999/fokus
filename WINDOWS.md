@@ -7,6 +7,15 @@ This code has never executed on Windows. It compiles for
 
 1. **Visual Studio Build Tools**, with the *Desktop development with C++* workload.
    Rust's MSVC toolchain needs the linker, and `libsqlite3-sys` compiles bundled C.
+   Without it the build reaches `error: linker \`link.exe\` not found` after
+   downloading every crate, which looks like a code failure and is not one.
+
+   ```powershell
+   winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+   ```
+
+   Open a new terminal afterwards: the installer changes environment variables
+   that an existing shell will not pick up.
 2. **Rust**: <https://rustup.rs> (defaults to MSVC, which is what you want)
 3. **Node 20+** and **pnpm**: `npm i -g pnpm`
 4. **WebView2 runtime**: already present on Windows 11; on 10 install the

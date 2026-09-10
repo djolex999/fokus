@@ -45,6 +45,11 @@ pnpm tauri build    # produce an installer
 
 Needs Node 20+, pnpm, and a Rust toolchain.
 
+On Windows the Rust MSVC target needs a linker, so install **Visual Studio Build
+Tools** with the *Desktop development with C++* workload first, or the build
+stops at `linker link.exe not found`. VS Code is a different product and does not
+provide it.
+
 ```bash
 pnpm tsc --noEmit                        # typecheck
 cargo test  --manifest-path src-tauri/Cargo.toml --lib

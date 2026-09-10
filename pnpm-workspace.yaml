@@ -1,0 +1,7 @@
+# esbuild ships a platform binary that its postinstall puts in place; without
+# this pnpm blocks the script and vite cannot build.
+#
+# Duplicated in package.json under "pnpm". pnpm 10 reads that field, pnpm 11
+# ignores it and reads this file, and a clone should work on either.
+onlyBuiltDependencies:
+  - esbuild
