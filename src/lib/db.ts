@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import type { PlannedMinutes, RunningSession } from '../types/session'
+import type { OpenSessionRow, PlannedMinutes, RunningSession } from '../types/session'
 import type { Answers } from '../types/asrs'
 import type { CaptureRow, SessionRow } from '../types/stats'
 
@@ -25,27 +25,38 @@ function nowIso(): string {
 }
 
 /**
- * Closes out sessions left open by a previous run.
- *
- * Marking a session abandoned on shutdown only covers a clean exit. A crash, a
- * SIGINT, or a force quit leaves `ended_at` null forever, and the next launch
- * would otherwise adopt a stale session as live. Reconciling at startup covers
- * every one of those, so it is the load bearing half of the pair.
- *
- * `ended_at` falls back to `last_active_at` rather than now, because the user
- * stopped working when they stopped interacting, not when they next opened
- * the app. Where there was no interaction at all, `started_at` is the only
- * honest answer.
+ * Sessions the previous run left open. Their fate is decided by
+ * `partitionOpenSessions`, not here: whether a session can be picked back up is
+ * a question about time, and time is easier to reason about, and to test, away
+ * from SQL.
  */
-export async function reconcileOpenSessions(): Promise<number> {
+export async function openSessions(): Promise<OpenSessionRow[]> {
   const conn = await db()
-  const result = await conn.execute(
+  return conn.select<OpenSessionRow[]>(
+    `SELECT id, task, planned_min, started_at, last_active_at
+       FROM sessions
+      WHERE ended_at IS NULL
+      ORDER BY started_at`,
+  )
+}
+
+/**
+ * Closes a session whose time ran out while nothing was watching.
+ *
+ * `ended_at` falls back to `last_active_at` rather than now, because the session
+ * stopped when the app stopped, not when it was next opened. `started_at` is the
+ * last resort, and thanks to the once a minute heartbeat it is now only reached
+ * by a session that died within its first minute.
+ */
+export async function closeAbandoned(sessionId: number): Promise<void> {
+  const conn = await db()
+  await conn.execute(
     `UPDATE sessions
         SET outcome = 'abandoned',
             ended_at = COALESCE(last_active_at, started_at)
-      WHERE ended_at IS NULL`,
+      WHERE id = $1 AND ended_at IS NULL`,
+    [sessionId],
   )
-  return result.rowsAffected
 }
 
 export async function startSession(

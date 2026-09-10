@@ -6,8 +6,10 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
   elapsedFraction,
   formatCountdown,
+  partitionOpenSessions,
   remainingSeconds,
   sessionOf,
+  toRunningSession,
   widgetReducer,
 } from '../types/session'
 import type { PlannedMinutes, RunningSession, WidgetState } from '../types/session'
@@ -19,7 +21,8 @@ import {
   lastAbandonedSession,
   openDatabase,
   recentCaptureTexts,
-  reconcileOpenSessions,
+  closeAbandoned,
+  openSessions,
   startSession,
   touchSession,
 } from '../lib/db'
@@ -166,10 +169,24 @@ export function CaptureWidget(): JSX.Element {
   useEffect(() => {
     const prepare = async (): Promise<void> => {
       await openDatabase()
-      const closed = await reconcileOpenSessions()
-      if (closed > 0) {
-        console.info(`closed ${closed} session(s) left open by a previous run`)
+
+      // A session outlives the process that was timing it. Quitting at minute
+      // six of twenty five and reopening should hand the session back, not
+      // throw it away; only time ends a session.
+      const { resume, close } = partitionOpenSessions(await openSessions(), Date.now())
+      for (const stale of close) {
+        await closeAbandoned(stale.id)
       }
+
+      if (resume !== null) {
+        dispatch({ type: 'sessionStarted', session: toRunningSession(resume) })
+        // Music will usually be refused here: the webview wants a user gesture
+        // and launching the app is not one it can see. Reported rather than
+        // swallowed, so a silent resumed session has a reason on the record.
+        startAudio()
+        return
+      }
+
       // Warm start. Prefilled but not focused: grabbing the keyboard at launch
       // would interrupt whatever the machine was already doing, which is the
       // one thing this app must never do.
@@ -179,7 +196,7 @@ export function CaptureWidget(): JSX.Element {
       }
     }
     prepare().catch((e: unknown) => setError(failure('baza nije otvorena', e)))
-  }, [])
+  }, [startAudio])
 
   // --- session lifecycle -------------------------------------------------
 

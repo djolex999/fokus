@@ -55,7 +55,7 @@ Timer, session lifecycle, styling beyond legibility, main window content, audio,
 4. Captures now link to the real active session.
 5. Widget states rendered: idle-with-task, running, capturing.
 6. Main window: capture review list. Each row → `uradi` / `zakaži` / `obriši`, writing `resolved`. Header shows the pending count. Empty state reads as done, not as praise.
-7. App exits cleanly with an in-flight session: mark it `abandoned` with `ended_at = now` on shutdown.
+7. ~~App exits cleanly with an in-flight session: mark it `abandoned` with `ended_at = now` on shutdown.~~ **Revised 2026-09-10 after use.** Abandoning on restart threw away sessions that were not over: quit at minute six of twenty five, reopen, session gone. Time ends a session, not the process timing it. A session whose planned window has not elapsed is now resumed at startup; only expired ones are closed, with `ended_at = COALESCE(last_active_at, started_at)`.
 
 ### Non-goals
 

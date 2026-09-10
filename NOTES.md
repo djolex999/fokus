@@ -153,13 +153,33 @@ dead space, still reported as on screen by `CGWindowListCopyWindowInfo`.
 - **Migration 5 deletes the placeholder** session and its captures. One of those
   13 rows was a real capture, `odraditi video za posao`, which went with it.
 
-### Known consequence, undecided
+### Known consequence, since decided
 
-A restart mid session always abandons it, including a `tauri dev` reload after a
-file save. That is item 7 applied literally. The alternative is to adopt an open
-session on startup when its planned window has not elapsed and abandon only the
-expired ones, which is better behaviour after a crash but contradicts item 7 as
-written. Built as specified, flagged, not decided.
+A restart mid session used to abandon it, which is item 7 applied literally. It
+was flagged twice as questionable and settled on 2026-09-10, in use: quitting the
+app at minute six of twenty five and reopening threw away a session that was
+never actually over.
+
+**Time ends a session, not the process holding the timer.** A session whose
+planned window has not elapsed is now picked back up at startup; only the ones
+whose time genuinely ran out while nothing was watching are closed, still with
+`ended_at = COALESCE(last_active_at, started_at)`. Where several are somehow
+open, the newest is resumed and the rest closed, because two running sessions is
+not a state the widget can represent.
+
+This contradicts item 7 as written, deliberately, and `PLAN.md` is marked at that
+line.
+
+Fourteen checks cover it: six minutes in resumes, exactly at the planned end does
+not, yesterday's session does not, a 50 still has time where a 25 would not,
+newest of several wins and the rest are closed, expired and live together, an
+unparseable `started_at` is closed rather than resurrected, and an unrecognised
+duration is not trusted into a type it does not belong to.
+
+Known gap: a resumed session usually starts silent. The webview only begins audio
+from a user gesture and launching the app is not one it can see. It is attempted
+and the refusal is reported rather than swallowed, so the reason is on the
+record.
 
 ### Verification
 

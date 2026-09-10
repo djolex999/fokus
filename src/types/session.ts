@@ -174,3 +174,60 @@ export function formatCountdown(totalSeconds: number): string {
   const seconds = totalSeconds % 60
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
+
+/** A session found still open at startup, straight from the database. */
+export type OpenSessionRow = {
+  id: number
+  task: string
+  planned_min: number
+  started_at: string
+  last_active_at: string | null
+}
+
+/**
+ * Decides what to do with sessions left open by a previous run.
+ *
+ * Originally every one of them was abandoned, which is what `PLAN.md` item 7
+ * says. In use that is wrong: quitting the app at minute six of twenty five and
+ * reopening it loses a session that was never actually over. Time is what ends a
+ * session, not the process holding the timer.
+ *
+ * So a session whose planned window has not elapsed is picked back up, and only
+ * the ones whose time genuinely ran out while nothing was watching are closed.
+ * If several are somehow open, the newest wins and the rest are closed, because
+ * two running sessions is not a state the widget can represent.
+ */
+export function partitionOpenSessions(
+  rows: OpenSessionRow[],
+  now: number,
+): { resume: OpenSessionRow | null; close: OpenSessionRow[] } {
+  const live = rows.filter((row) => {
+    const ends = Date.parse(row.started_at) + row.planned_min * 60_000
+    return Number.isFinite(ends) && now < ends
+  })
+
+  const newest = live.reduce<OpenSessionRow | null>((best, row) => {
+    if (best === null) return row
+    return Date.parse(row.started_at) > Date.parse(best.started_at) ? row : best
+  }, null)
+
+  return {
+    resume: newest,
+    close: rows.filter((row) => row.id !== newest?.id),
+  }
+}
+
+/** Narrows a stored duration to the two the app offers. */
+export function toPlannedMinutes(value: number): PlannedMinutes {
+  return value === 50 ? 50 : 25
+}
+
+export function toRunningSession(row: OpenSessionRow): RunningSession {
+  return {
+    id: row.id,
+    task: row.task,
+    plannedMin: toPlannedMinutes(row.planned_min),
+    startedAt: row.started_at,
+    lastInteractionAt: row.last_active_at ?? row.started_at,
+  }
+}
