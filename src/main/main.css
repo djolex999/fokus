@@ -5,6 +5,10 @@
   --muted: #7c7c86;
   --dim: #55555e;
   --line: #232329;
+  /* Chart greys, separate from --line. A border colour and a data colour have
+     different jobs: a border should recede, a bar has to be readable. */
+  --bar: #44444e;
+  --bar-strong: #8b8b96;
   --error: #c08a63;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
@@ -327,7 +331,7 @@ body {
 .stat h2 {
   font-size: 12px;
   font-weight: 500;
-  color: var(--dim);
+  color: var(--muted);
   letter-spacing: 0.04em;
   padding-bottom: 12px;
 }
@@ -368,7 +372,7 @@ body {
 .bar-fill {
   display: block;
   height: 100%;
-  background: var(--muted);
+  background: var(--bar-strong);
 }
 
 .bar-value {
@@ -413,11 +417,11 @@ body {
 }
 
 .hour-started {
-  background: var(--line);
+  background: var(--bar);
 }
 
 .hour-abandoned {
-  background: var(--muted);
+  background: var(--bar-strong);
 }
 
 .hour-label {
@@ -571,11 +575,11 @@ body {
 }
 
 .swatch-started {
-  background: var(--line);
+  background: var(--bar);
 }
 
 .swatch-abandoned {
-  background: var(--muted);
+  background: var(--bar-strong);
 }
 
 .swatch-abandoned:not(:first-child) {
