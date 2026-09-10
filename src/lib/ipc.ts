@@ -26,6 +26,13 @@ export async function setWidgetHeight(height: number): Promise<void> {
   await invoke('set_widget_height', { height })
 }
 
+/** Browser print to PDF is the entire export mechanism. A PDF library would be
+ *  a dependency bought for one button. The JS API has no print binding in this
+ *  version, so this is the webview's own, which WKWebView honours. */
+export function printPage(): void {
+  window.print()
+}
+
 /** Used only by the tray quit path, after any in flight session is closed out. */
 export async function quitApp(): Promise<void> {
   await invoke('quit_app')

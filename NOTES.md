@@ -227,3 +227,70 @@ past the end, and 0 if the clock moves backwards.
 
 `~/fokus/audio` does not exist on this machine, which is the silent path. The
 folder-present path is untested.
+
+---
+
+## Session 4: the evidence
+
+### The Part A rubric, verified rather than recalled
+
+The scoring is not a sum, and getting the boundary wrong shifts every result.
+The official form was fetched, rendered to an image and read directly:
+
+- Questions 1, 2, 3 count from "Sometimes" upward (value 2).
+- Questions 4, 5, 6 count only from "Often" upward (value 3).
+- Four or more of six is the threshold at which the form says further
+  investigation is warranted.
+
+Part B is recorded in `answers_json` but has no scoring rule. The instrument
+does not define one, and inventing a number for it would be inventing a measure.
+
+The discriminating test: six answers of "Sometimes" score **3, not 6**. Any
+implementation using a single uniform threshold passes the easy cases and fails
+that one.
+
+### Decisions taken during the session
+
+- **The Serbian questions are a translation, not the validated instrument.**
+  This is the weakest point in Session 4 and it is a real limitation, not a
+  rough edge. Strictly, a translated ASRS is not an ASRS. Two mitigations: the
+  original English wording is rendered under each question so the person
+  answering can check what was actually asked, and the printed page states that
+  the items were translated. Sourcing the official Serbian version is the only
+  real fix.
+- **The result screen says less than the form does.** The printed ASRS says four
+  or more means "symptoms highly consistent with ADHD". `PLAN.md` permits no
+  interpretation beyond "this is a screener, take it to a psychiatrist", so that
+  sentence is deliberately absent. The screen reports the count and stops.
+- **Statistics are computed in TypeScript from rows loaded whole.** One person's
+  sessions is a small dataset; SQL would buy nothing and cost the ability to test
+  the arithmetic. Time of day has to be local, since SQLite holds UTC and a
+  session started at 23:30 local is a late night session regardless.
+- **Printing is `window.print()`.** The JS API has no print binding in this
+  version, and the webview honours its own. A PDF library would be a dependency
+  bought for one button.
+
+### Verification
+
+- **Scoring**: 14 checks against hand scored answer sets, including the uniform
+  threshold trap above, Part B being ignored, and unanswered items not counting.
+- **Statistics**: 20 checks covering completion by duration, median abandonment
+  over an even numbered set, captures per session, local hour bucketing, Monday
+  based week boundaries, and the empty dataset. Two of those failed first time
+  and both failures were in the test, not the code; the weekday was then
+  confirmed with `date` rather than counted by hand.
+- **Print layout**: rendered with two weeks of realistic data and measured.
+  190.4mm of the 269mm available on A4 at a 14mm margin, so it fits one page
+  with room. Every print colour is a pure grey, with the two chart series at
+  luminance 208 and 85, so grayscale legibility is structural rather than lucky.
+  One bug found this way: the legend swatches kept their screen colours, putting
+  a near black chip next to a light grey bar and making the legend contradict the
+  chart it explained.
+- **Copy**: every string in the result and printed page reread for diagnostic
+  implication. The only occurrences of "dijagnoza" are the two disclaimers.
+
+### Still open
+
+The questionnaire, the statistics screen and the print dialog have not been
+exercised by hand. Statistics need ten sessions before they render at all, and
+there are currently zero.

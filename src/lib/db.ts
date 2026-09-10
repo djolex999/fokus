@@ -1,5 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
 import type { PlannedMinutes, RunningSession } from '../types/session'
+import type { Answers } from '../types/asrs'
+import type { CaptureRow, SessionRow } from '../types/stats'
 
 const DB_URL = 'sqlite:fokus.db'
 
@@ -166,4 +168,47 @@ export async function pendingCaptures(): Promise<PendingCapture[]> {
 export async function resolveCapture(id: number, resolution: Resolution): Promise<void> {
   const conn = await db()
   await conn.execute('UPDATE captures SET resolved = $1 WHERE id = $2', [resolution, id])
+}
+
+// --- ASRS -----------------------------------------------------------------
+
+export type AsrsRecord = {
+  id: number
+  answers_json: string
+  part_a_score: number
+  taken_at: string
+}
+
+/** Every take is kept. Results are never overwritten: a screener taken on a bad
+ *  week and one taken on a good week are both real, and the pattern across them
+ *  is worth more to a clinician than the latest number. */
+export async function saveAsrs(answers: Answers, partAScore: number): Promise<void> {
+  const conn = await db()
+  await conn.execute(
+    'INSERT INTO asrs (answers_json, part_a_score, taken_at) VALUES ($1, $2, $3)',
+    [JSON.stringify(answers), partAScore, nowIso()],
+  )
+}
+
+export async function asrsHistory(): Promise<AsrsRecord[]> {
+  const conn = await db()
+  return conn.select<AsrsRecord[]>(
+    'SELECT id, answers_json, part_a_score, taken_at FROM asrs ORDER BY taken_at DESC',
+  )
+}
+
+// --- statistics -----------------------------------------------------------
+
+/** Loaded whole and aggregated in TypeScript. One person's sessions is a small
+ *  enough dataset that SQL would buy nothing and cost testability. */
+export async function allSessions(): Promise<SessionRow[]> {
+  const conn = await db()
+  return conn.select<SessionRow[]>(
+    'SELECT id, planned_min, started_at, ended_at, outcome FROM sessions ORDER BY started_at',
+  )
+}
+
+export async function allCaptureTimes(): Promise<CaptureRow[]> {
+  const conn = await db()
+  return conn.select<CaptureRow[]>('SELECT session_id, created_at FROM captures')
 }

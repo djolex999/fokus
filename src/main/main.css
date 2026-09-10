@@ -124,3 +124,460 @@ body {
   font-size: 12px;
   padding-top: 18px;
 }
+
+/* --- navigation -------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 26px;
+}
+
+.tab {
+  border: 0;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab.active {
+  color: var(--fg);
+  background: var(--raised);
+}
+
+.print-action {
+  margin-left: auto;
+  border: 1px solid var(--line);
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 0 4px;
+}
+
+/* --- questionnaire ----------------------------------------------------- */
+
+.questions {
+  list-style: none;
+}
+
+.question {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.question-text {
+  line-height: 1.45;
+  display: flex;
+  gap: 9px;
+}
+
+.question-number {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* The source wording, kept next to the translation so the person answering can
+   check what was actually asked. This is a clinical instrument, not UI copy. */
+.question-original {
+  color: var(--dim);
+  font-size: 11.5px;
+  line-height: 1.4;
+  padding: 5px 0 0 26px;
+}
+
+.scale {
+  display: flex;
+  gap: 5px;
+  padding: 11px 0 0 26px;
+  flex-wrap: wrap;
+}
+
+.option {
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: default;
+}
+
+.option:hover {
+  color: var(--fg);
+  border-color: var(--dim);
+}
+
+.option.selected {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: #0e0e10;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 26px;
+}
+
+.actions button {
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.actions button:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--dim);
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+}
+
+.actions .primary:not(:disabled) {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: #0e0e10;
+}
+
+/* --- result ------------------------------------------------------------ */
+
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 30px 0 4px;
+}
+
+.score-value {
+  font-size: 52px;
+  font-weight: 200;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.score-of {
+  color: var(--dim);
+  font-size: 15px;
+}
+
+/* Set apart from the score so it reads as the instrument speaking, not as a
+   caption on the number. */
+.framing {
+  margin: 26px 0 0;
+  padding: 18px 20px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 46em;
+}
+
+.history {
+  padding-top: 40px;
+}
+
+.history h2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding-bottom: 10px;
+}
+
+.history ul {
+  list-style: none;
+}
+
+.history li {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- statistics -------------------------------------------------------- */
+
+.stat {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.stat h2 {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+  padding-bottom: 12px;
+}
+
+.figure {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bars {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.bars li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  width: 60px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--raised);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--muted);
+}
+
+.bar-value {
+  width: 110px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bars are divs. No chart library for five numbers. */
+.hours {
+  list-style: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 90px;
+}
+
+.hours li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.hour-column {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+
+.hour-started,
+.hour-abandoned {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  border-radius: 1px;
+}
+
+.hour-started {
+  background: var(--line);
+}
+
+.hour-abandoned {
+  background: var(--muted);
+}
+
+.hour-label {
+  color: var(--dim);
+  font-size: 10px;
+  text-align: center;
+  padding-top: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- printing ---------------------------------------------------------- */
+
+.print-sheet {
+  display: none;
+}
+
+@media print {
+  /* Paper is white and ink is expensive. The screen theme is inverted wholesale
+     rather than maintained twice. */
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .screen {
+    display: none;
+  }
+
+  .print-sheet {
+    display: block;
+    padding: 0;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  .print-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid #000;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+  }
+
+  .print-header h1 {
+    font-size: 13pt;
+    font-weight: 600;
+  }
+
+  .print-sheet section {
+    margin-bottom: 14pt;
+    break-inside: avoid;
+  }
+
+  .print-sheet h2 {
+    font-size: 10pt;
+    font-weight: 600;
+    margin-bottom: 5pt;
+    color: #000;
+    letter-spacing: 0;
+    padding: 0;
+  }
+
+  .print-score {
+    font-size: 15pt;
+    font-weight: 600;
+  }
+
+  .print-note {
+    margin-top: 5pt;
+    font-size: 8.5pt;
+    font-style: italic;
+  }
+
+  /* The statistics body is shared with the screen, so its colours are remapped
+     for paper rather than duplicated. Greys are chosen to survive a grayscale
+     printer, which is the only kind that matters here. */
+  .print-sheet .stat {
+    padding: 7pt 0;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .print-sheet .stat h2 {
+    color: #000;
+    padding-bottom: 4pt;
+  }
+
+  .print-sheet .figure {
+    font-size: 11pt;
+  }
+
+  .print-sheet .bar-label,
+  .print-sheet .bar-value,
+  .print-sheet .meta,
+  .print-sheet .hour-label {
+    color: #333;
+    font-size: 8.5pt;
+  }
+
+  .print-sheet .bar-track {
+    background: #e0e0e0;
+    height: 7pt;
+  }
+
+  .print-sheet .bar-fill {
+    background: #555;
+  }
+
+  .print-sheet .hours {
+    height: 46pt;
+  }
+
+  .print-sheet .hour-started {
+    background: #d0d0d0;
+  }
+
+  .print-sheet .hour-abandoned {
+    background: #555;
+  }
+
+  /* The swatches keep their screen colours unless remapped, which puts a near
+     black chip next to a light grey bar and makes the legend contradict the
+     chart it is explaining. */
+  .print-sheet .swatch-started {
+    background: #d0d0d0;
+  }
+
+  .print-sheet .swatch-abandoned {
+    background: #555;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--dim);
+  font-size: 11.5px;
+  padding-top: 10px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.swatch-started {
+  background: var(--line);
+}
+
+.swatch-abandoned {
+  background: var(--muted);
+}
+
+.swatch-abandoned:not(:first-child) {
+  margin-left: 8px;
+}

@@ -117,10 +117,10 @@ ASRS, statistics, packaging.
 
 ### Acceptance
 
-- [ ] Part A scoring verified by hand against the WHO rubric on two constructed answer sets.
-- [ ] No screen anywhere states or implies a diagnosis. Reread every string with this specifically in mind.
-- [ ] Print output fits one page and is legible in grayscale.
-- [ ] Installed build runs without a dev server and the db persists across restarts.
+- [x] Part A scoring verified by hand against the WHO rubric on two constructed answer sets.
+- [x] No screen anywhere states or implies a diagnosis. Reread every string with this specifically in mind.
+- [x] Print output fits one page and is legible in grayscale. Measured: 190.4mm of 269mm.
+- [x] Installed build runs without a dev server and the db persists across restarts.
 
 ---
 
