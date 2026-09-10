@@ -31,7 +31,10 @@ export function PrintSheet({
       <section>
         <h2>{t.printAsrsHeading}</h2>
         {asrs === null ? (
-          <p>{t.printNoAsrs}</p>
+          <>
+            <p>{t.printNoAsrs}</p>
+            <p className="print-note">{t.disclaimer}</p>
+          </>
         ) : (
           <>
             <p className="print-score">
@@ -40,6 +43,7 @@ export function PrintSheet({
             <p>{fill(t.printShaded, { n: asrs.part_a_score })}</p>
             {/* The translation caveat belongs only where a translation was used. */}
             <p className="print-note">{t.printNote}</p>
+            <p className="print-note">{t.disclaimer}</p>
           </>
         )}
       </section>

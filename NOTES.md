@@ -506,3 +506,36 @@ Checked by a test rather than by reading: both tables have identical keys, no
 value is empty, no English value is still the Serbian one except the two words
 that are legitimately the same, and every `{placeholder}` survives translation in
 both tables, since a lost one silently removes a number from the UI.
+
+### English copy, revised after reading it out loud
+
+The first pass translated word for word and produced things nobody says.
+"pripremi za pregled" became "prepare for appointment", which says nothing about
+what the button does and reads as a calendar feature; *pregled* carries the
+medical sense in Serbian and "appointment" carries none of it. It is now "print
+for your doctor": what happens, and who for.
+
+Others in the same pass: "write the thought down" to "write it down"; "do it" to
+"done", since that button writes `resolved = 'done'` and was telling you to do
+something instead of recording that you had; "breaking off" to "stopped early",
+which is a label rather than a phrase; and "captured" to "written down", which
+also fixed a warning still calling it "everything captured" after the rename.
+
+### Disclaimer
+
+Added on request, and correct to add: this is about to be a public download that
+administers a clinical screener. It states three things and does not overclaim:
+fokus is not a medical device, nobody has approved or reviewed it, and the
+software around ASRS v1.1 is not clinically validated. The result is material for
+a conversation with a doctor, not a finding.
+
+Shown before the questions rather than only with the score. A disclaimer that
+appears once you have a number has already let you read the number as a verdict.
+Also on the result, and on the printed page including when no questionnaire has
+been taken, since that page is the thing that leaves the house.
+
+Set as a footnote rather than in alarm colours: a warning styled as an alert gets
+dismissed as decoration, one styled as a footnote gets read once and believed.
+
+The printed page still fits: 200.6mm of the 269mm available, so the disclaimer
+cost 10mm of a 78mm margin.

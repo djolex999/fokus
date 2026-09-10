@@ -55,6 +55,7 @@ type Strings = {
   resolveDelete: string
   // questionnaire
   questionnaireLede: string
+  disclaimer: string
   save: string
   /** `{n}` is how many questions are left. */
   remaining: string
@@ -123,6 +124,8 @@ const sr: Strings = {
   resolveScheduled: 'zakaži',
   resolveDelete: 'obriši',
   questionnaireLede: 'ASRS v1.1. Odgovaraj na osnovu poslednjih šest meseci.',
+  disclaimer:
+    'fokus nije medicinski uređaj i nije odobren ni proveren ni od koga. Upitnik je ASRS v1.1, softver oko njega nije klinički validiran. Rezultat je materijal za razgovor sa lekarom, ne nalaz.',
   save: 'sačuvaj',
   remaining: 'ostalo {n}',
   outOfSix: 'od 6',
@@ -166,7 +169,7 @@ const sr: Strings = {
 
 const en: Strings = {
   taskPlaceholder: 'what are you working on',
-  capturePlaceholder: 'write the thought down',
+  capturePlaceholder: 'write it down',
   newSession: 'new session',
   durationHint: 'tab',
   returnCount: 'return {n}',
@@ -176,15 +179,17 @@ const en: Strings = {
   errSessionNotClosed: 'session did not close',
   errFocusNotReturned: 'focus was not returned',
   errCannotLoad: 'cannot load',
-  tabCaptures: 'captured',
+  tabCaptures: 'written down',
   tabQuestionnaire: 'questionnaire',
   tabStats: 'statistics',
-  printAction: 'prepare for appointment',
-  nothingPending: 'nothing here',
-  resolveDone: 'do it',
+  printAction: 'print for your doctor',
+  nothingPending: 'nothing left',
+  resolveDone: 'done',
   resolveScheduled: 'schedule',
   resolveDelete: 'delete',
   questionnaireLede: 'ASRS v1.1. Answer for the past six months.',
+  disclaimer:
+    'fokus is not a medical device and has not been approved or reviewed by anyone. The questionnaire is ASRS v1.1; the software around it is not clinically validated. The result is something to discuss with a doctor, not a finding.',
   save: 'save',
   remaining: '{n} left',
   outOfSix: 'of 6',
@@ -195,20 +200,20 @@ const en: Strings = {
   framingTakeIt: 'Take the result to a psychiatrist.',
   retake: 'take it again',
   earlier: 'earlier',
-  statCompletion: 'completed by length',
-  statAbandon: 'breaking off',
+  statCompletion: 'completion by length',
+  statAbandon: 'stopped early',
   statCapturesPerSession: 'returns per session',
   statTimeOfDay: 'by time of day',
   statReturns: 'returns',
-  noAbandoned: 'no sessions broken off',
-  medianAbandon: '{n} min to breaking off, median',
+  noAbandoned: 'nothing stopped early',
+  medianAbandon: 'median {n} min before stopping',
   legendStarted: 'started',
-  legendAbandoned: 'broken off',
+  legendAbandoned: 'stopped early',
   notEnoughSessions: '{n} more before the numbers mean anything.',
   returnsWeek: '{a} this week, {b} last week',
   minutes: 'min',
   clearSessions: 'delete all sessions',
-  clearWarning: 'also deletes everything captured, not the questionnaire',
+  clearWarning: 'also deletes everything written down, not the questionnaire',
   clearConfirm: 'delete',
   clearCancel: 'cancel',
   errNotDeleted: 'not deleted',
@@ -220,7 +225,7 @@ const en: Strings = {
   printShaded: '{n} of six items in the shaded range.',
   printNote:
     'A screening questionnaire, not a diagnosis. It does not make one and does not rule one out.',
-  trayOpen: 'Captured',
+  trayOpen: 'Written down',
   trayAbandon: 'End session',
   trayMusic: 'Music',
   trayQuit: 'Quit',

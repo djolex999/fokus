@@ -95,6 +95,10 @@ function Form({
       </header>
 
       <p className="lede">{t.questionnaireLede}</p>
+      {/* Before the questions, not after the score. A disclaimer that only
+          appears once you have a number has already let you read the number as
+          a verdict. */}
+      <p className="disclaimer">{t.disclaimer}</p>
 
       {error !== null && <p className="error">{error}</p>}
 
@@ -181,6 +185,7 @@ function Result({
       <div className="framing">
         <p>{t.framingNotDiagnosis}</p>
         <p>{t.framingTakeIt}</p>
+        <p className="disclaimer">{t.disclaimer}</p>
       </div>
 
       <div className="actions">
