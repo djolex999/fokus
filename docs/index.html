@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fokus — catch the thought before you follow it</title>
+<meta name="description" content="A local-first focus timer built around one mechanic: writing down an intrusive thought faster than acting on it. Median round trip 1.1 seconds.">
+<meta property="og:title" content="fokus">
+<meta property="og:description" content="Catch the thought before you follow it. A focus timer built around one mechanic.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23ededf2' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M7 17V7h10M37 17V7H27M7 27v10h10M37 27v10H27'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --void:#0a0a0c; --panel:#161619; --raised:#111114;
+  --edge:rgba(255,255,255,.09); --rule:#1e1e23;
+  --fg:#ededf2; --muted:#7c7c86; --dim:#4a4a53; --accent:#c9a36a;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono","Segoe UI Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--void); color:var(--fg); font-family:var(--sans);
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:720px; margin:0 auto; padding:0 28px}
+a{color:var(--fg)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
+
+/* ── eyebrow / mark ───────────────────────────────────────── */
+.top{display:flex; align-items:center; gap:12px; padding:56px 0 0}
+.mark{width:22px; height:22px; flex-shrink:0}
+.wordmark{font-size:15px; letter-spacing:.02em}
+.top .meta{margin-left:auto; font-family:var(--mono); font-size:11.5px; color:var(--dim); letter-spacing:.04em}
+
+/* ── hero ─────────────────────────────────────────────────── */
+.hero{padding:76px 0 0}
+.hero h1{
+  font-size:clamp(34px,6.4vw,54px); font-weight:250;
+  letter-spacing:-.028em; line-height:1.08; max-width:15ch;
+}
+.hero p{
+  margin-top:22px; color:var(--muted); font-size:17px;
+  line-height:1.55; max-width:46ch;
+}
+
+/* ── the widget, reproduced ───────────────────────────────── */
+.demo{padding:52px 0 0}
+.demo-label{
+  font-family:var(--mono); font-size:11px; color:var(--dim);
+  letter-spacing:.09em; text-transform:uppercase; padding-bottom:13px;
+}
+.widget{
+  width:280px; min-height:80px; padding:13px 15px;
+  background:var(--panel); border:1px solid var(--edge); border-radius:11px;
+  display:flex; flex-direction:column; justify-content:center; gap:5px;
+  position:relative; cursor:text; user-select:none;
+}
+.widget:focus-within{border-color:#33333c}
+.w-primary{font-size:24px; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-.015em; line-height:1.05}
+.w-secondary{color:var(--muted); font-size:11.5px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.w-input{
+  width:100%; border:0; outline:0; background:transparent; color:var(--fg);
+  font-family:var(--sans); font-size:15px; line-height:1.25; padding:0;
+}
+.w-input::placeholder{color:var(--dim)}
+.w-confirm{color:var(--muted); font-size:12px; letter-spacing:.04em}
+.w-bar{position:absolute; left:0; right:0; bottom:0; height:2px; overflow:hidden; border-radius:0 0 11px 11px}
+.w-bar i{display:block; height:100%; width:38%; background:var(--fg); opacity:.45}
+.demo-hint{
+  padding-top:14px; font-family:var(--mono); font-size:11.5px;
+  color:var(--dim); line-height:1.7;
+}
+.demo-hint b{color:var(--muted); font-weight:400}
+
+/* ── readout ──────────────────────────────────────────────── */
+.readout{
+  margin-top:76px; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+  display:grid; grid-template-columns:repeat(3,1fr);
+}
+.cell{padding:26px 0}
+.cell + .cell{border-left:1px solid var(--rule); padding-left:24px}
+.cell .n{font-size:27px; font-weight:250; font-variant-numeric:tabular-nums; letter-spacing:-.02em; display:block}
+.cell .k{font-family:var(--mono); font-size:10.5px; color:var(--dim); letter-spacing:.07em; text-transform:uppercase; display:block; margin-top:7px}
+.readout-note{padding:18px 0 0; color:var(--dim); font-size:13px}
+
+/* ── sections ─────────────────────────────────────────────── */
+.band{padding:72px 0 0}
+.band > h2{
+  font-family:var(--mono); font-size:11px; color:var(--dim);
+  letter-spacing:.09em; text-transform:uppercase; font-weight:400;
+  padding-bottom:26px;
+}
+.does{list-style:none; display:flex; flex-direction:column; gap:26px}
+.does li{max-width:56ch}
+.does h3{font-size:16px; font-weight:500; letter-spacing:-.005em}
+.does p{color:var(--muted); font-size:14.5px; margin-top:5px}
+
+/* ── refusals: the signature ──────────────────────────────── */
+.refuse{display:flex; flex-wrap:wrap; gap:7px 9px; max-width:62ch}
+.refuse span{
+  font-size:14px; color:var(--dim);
+  text-decoration:line-through; text-decoration-color:var(--accent);
+  text-decoration-thickness:1px; text-underline-offset:0;
+}
+.refuse-note{margin-top:24px; color:var(--muted); font-size:14.5px; max-width:52ch}
+.refuse-note strong{color:var(--fg); font-weight:500}
+
+/* ── download ─────────────────────────────────────────────── */
+.get{display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding-top:4px}
+.btn{
+  display:inline-block; padding:11px 20px; border-radius:7px;
+  background:var(--fg); color:#0a0a0c; text-decoration:none;
+  font-size:14.5px; font-weight:500;
+}
+.btn:hover{background:#fff}
+.btn.ghost{background:transparent; color:var(--muted); border:1px solid var(--rule)}
+.btn.ghost:hover{color:var(--fg); border-color:var(--dim); background:transparent}
+.caveats{list-style:none; margin-top:26px; display:flex; flex-direction:column; gap:9px}
+.caveats li{color:var(--dim); font-size:13.5px; padding-left:16px; position:relative; max-width:58ch}
+.caveats li::before{content:"—"; position:absolute; left:0; color:var(--rule)}
+
+/* ── foot ─────────────────────────────────────────────────── */
+footer{margin-top:80px; border-top:1px solid var(--rule); padding:26px 0 64px}
+footer p{color:var(--dim); font-size:12.5px; max-width:60ch}
+footer p + p{margin-top:9px}
+footer a{color:var(--muted)}
+
+@media (max-width:560px){
+  .readout{grid-template-columns:1fr}
+  .cell + .cell{border-left:0; border-top:1px solid var(--rule); padding-left:0}
+  .widget{width:100%; max-width:280px}
+}
+@media (prefers-reduced-motion:no-preference){
+  /* Deliberately empty. An anti-distraction tool does not get an animated
+     landing page; the only thing that moves here is the reader's own typing. */
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <svg class="mark" viewBox="0 0 44 44" aria-hidden="true">
+      <g fill="none" stroke="#ededf2" stroke-width="3.5" stroke-linecap="round">
+        <path d="M7 17V7h10M37 17V7H27M7 27v10h10M37 27v10H27"/>
+      </g>
+    </svg>
+    <span class="wordmark">fokus</span>
+    <span class="meta">macOS · MIT · v0.1.0</span>
+  </header>
+
+  <section class="hero">
+    <h1>Catch the thought before you follow it.</h1>
+    <p>You are working. <em>Reply to that email. Check that invoice.</em> Following it costs you the session. fokus gives you somewhere to put it, and puts your cursor back where it was.</p>
+  </section>
+
+  <section class="demo">
+    <p class="demo-label">The entire interface, actual size</p>
+
+    <div class="widget" id="widget">
+      <div id="w-body">
+        <div class="w-primary" id="w-timer">18:42</div>
+        <div class="w-secondary" id="w-task">write the quarterly report</div>
+      </div>
+      <div class="w-bar"><i></i></div>
+    </div>
+
+    <p class="demo-hint">
+      <b>Click it.</b> Type a thought, press Enter.<br>
+      In the app this happens over whatever you are working in, and your cursor goes back there.
+    </p>
+  </section>
+
+  <section class="readout" aria-label="Measurements">
+    <div class="cell"><span class="n">1.1<small style="font-size:15px;color:var(--muted)">s</small></span><span class="k">median round trip</span></div>
+    <div class="cell"><span class="n">21<small style="font-size:15px;color:var(--muted)">ms</small></span><span class="k">the app's own share</span></div>
+    <div class="cell"><span class="n">0</span><span class="k">network calls</span></div>
+  </section>
+  <p class="readout-note">Measured over ten runs from a real editor. The rest of the 1.1 seconds is you typing.</p>
+
+  <section class="band">
+    <h2>What it does</h2>
+    <ul class="does">
+      <li>
+        <h3>Sessions</h3>
+        <p>A task and 25 or 50 minutes. The countdown comes from the wall clock, so it survives sleep. Stopping early is recorded as data, never as failure — there is no red X anywhere in this app.</p>
+      </li>
+      <li>
+        <h3>Capture</h3>
+        <p>One line, one keystroke, focus returns. You see <code>return 3</code> for a second, then nothing.</p>
+      </li>
+      <li>
+        <h3>Come back</h3>
+        <p>Away five minutes or more and the widget shows your task and the last three things you wrote down, so you can pick up the thread without opening anything.</p>
+      </li>
+      <li>
+        <h3>Evidence</h3>
+        <p>The WHO ASRS v1.1 screener and statistics over your sessions, printable as one page to take to a doctor.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>What it refuses</h2>
+    <div class="refuse">
+      <span>notifications</span><span>streaks</span><span>points</span><span>badges</span>
+      <span>levels</span><span>accounts</span><span>sync</span><span>the cloud</span>
+      <span>analytics</span><span>telemetry</span><span>projects</span><span>tags</span>
+      <span>due dates</span><span>calendar integration</span><span>AI</span>
+      <span>themes</span><span>settings</span><span>a mobile app</span>
+    </div>
+    <p class="refuse-note"><strong>Not missing. Refused.</strong> Every one of these is on a written list of things this app will not have. A tool that fights distraction cannot afford to be one.</p>
+  </section>
+
+  <section class="band">
+    <h2>Get it</h2>
+    <div class="get">
+      <a class="btn" href="https://github.com/djolex999/fokus/releases">Download for macOS</a>
+      <a class="btn ghost" href="https://github.com/djolex999/fokus">Read the source</a>
+    </div>
+    <ul class="caveats">
+      <li>Not signed. First launch needs right-click → Open, or System Settings → Privacy &amp; Security → Open Anyway.</li>
+      <li>Windows is written but has never been run. No build is published until it has.</li>
+      <li>Not a medical device, and not reviewed or approved by anyone. It reproduces the ASRS v1.1 screener; the software around it is not clinically validated. A score is something to discuss with a doctor, not a finding.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Built in four sessions against a written list of constraints. The decisions, the measurements, and the places the plan turned out to be wrong are in <a href="https://github.com/djolex999/fokus/blob/master/NOTES.md">NOTES.md</a>.</p>
+    <p>MIT licensed. No tracking on this page either.</p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var widget = document.getElementById('widget');
+  var body = document.getElementById('w-body');
+  var TASK = 'write the quarterly report';
+  var state = 'running';
+  var returns = 0;
+  var timer = null;
+
+  // One handler on the container, and a state variable that says what is on
+  // screen. The first version re-attached a listener to each freshly created
+  // input, which meant reasoning about which element a closure had captured
+  // every time the markup was replaced.
+  function render(next) {
+    state = next;
+    if (next === 'running') {
+      body.innerHTML =
+        '<div class="w-primary">18:42</div>' +
+        '<div class="w-secondary">' + TASK + '</div>';
+    } else if (next === 'capturing') {
+      body.innerHTML =
+        '<input class="w-input" id="w-in" placeholder="write it down" ' +
+        'autocomplete="off" spellcheck="false" aria-label="Write down a thought">' +
+        '<div class="w-secondary">' + TASK + '</div>';
+      var input = document.getElementById('w-in');
+      if (input) input.focus();
+    } else if (next === 'confirmed') {
+      body.innerHTML =
+        '<div class="w-confirm">return ' + returns + '</div>' +
+        '<div class="w-secondary">18:41 · ' + TASK + '</div>';
+    }
+  }
+
+  function open() {
+    if (state !== 'capturing') {
+      clearTimeout(timer);
+      render('capturing');
+    }
+  }
+
+  widget.addEventListener('click', open);
+
+  widget.addEventListener('keydown', function (e) {
+    if (state !== 'capturing') {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+      return;
+    }
+
+    var input = document.getElementById('w-in');
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!input || input.value.trim() === '') {
+        render('running');
+        return;
+      }
+      returns += 1;
+      render('confirmed');
+      // One second, exactly as the app does it, and with no fade: the app has
+      // no animation at this moment on purpose, and neither does this.
+      clearTimeout(timer);
+      timer = setTimeout(function () { render('running'); }, 1000);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      render('running');
+    }
+  });
+})();
+</script>
+</body>
+</html>
