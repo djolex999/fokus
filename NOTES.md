@@ -559,6 +559,22 @@ carries no timestamp, so once you have looked away it no longer tells you whethe
 the session ended a minute ago or this morning. It now clears itself after a
 minute. Long enough to be seen if you look up, short enough never to be stale.
 
+### App icon follows the tray icon
+
+The dock icon was still the original white dot, which now clashed with the menu
+bar and carried the same problem: too generic, and close enough to a record
+button. It is the same viewfinder on a near black tile, so the two read as one
+thing rather than two apps.
+
+The tile has a slight lift toward the top rather than being flat. A flat near
+black square reads as a hole in the dock beside everything else that has depth.
+
+Checked by rendering at 128, 64, 32 and 16 rather than admiring it at 1024: it
+holds to 32 and softens at 16, which is where every icon softens.
+
+Note for reinstalling: macOS caches dock icons hard. `touch` the bundle and
+`killall Dock`, or the old icon persists and looks like the build failed.
+
 ### Tray icon: third attempt
 
 A filled dot was too generic to find. A ring with a dot in the middle was
