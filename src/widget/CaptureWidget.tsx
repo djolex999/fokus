@@ -178,7 +178,15 @@ export function CaptureWidget(): JSX.Element {
         await closeAbandoned(stale.id)
       }
 
+      if (close.length > 0) {
+        report(`startup: closed ${close.length} expired session(s)`)
+      }
+
       if (resume !== null) {
+        const left = Math.round(
+          (Date.parse(resume.started_at) + resume.planned_min * 60_000 - Date.now()) / 60_000,
+        )
+        report(`startup: resumed "${resume.task}", about ${left} min left`)
         dispatch({ type: 'sessionStarted', session: toRunningSession(resume) })
         // Music will usually be refused here: the webview wants a user gesture
         // and launching the app is not one it can see. Reported rather than
