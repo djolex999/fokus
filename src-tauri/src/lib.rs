@@ -5,7 +5,7 @@ mod window_pos;
 use std::sync::Mutex;
 use std::time::Instant;
 
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
@@ -15,6 +15,7 @@ const MAIN_LABEL: &str = "main";
 const CAPTURE_OPEN_EVENT: &str = "capture:open";
 const ABANDON_EVENT: &str = "session:abandon";
 const QUIT_EVENT: &str = "app:quit";
+const MUSIC_EVENT: &str = "audio:enabled";
 /// How long the widget gets to close out an in flight session before the app
 /// exits anyway. A failed write must not strand the user in an app that will
 /// not quit; the startup reconcile will catch whatever was missed.
@@ -30,12 +31,24 @@ const WIDGET_WIDTH: f64 = 280.0;
 /// unexplained silence the filter exists to prevent.
 const AUDIO_EXTENSIONS: [&str; 6] = ["mp3", "m4a", "aac", "wav", "aiff", "flac"];
 
+/// The tray's music item, kept so its tick can be corrected when a new session
+/// turns the music back on.
+struct TrayItems {
+    music: CheckMenuItem<tauri::Wry>,
+}
+
 #[derive(Default)]
 struct FokusState {
     /// Application that was frontmost when the shortcut fired.
     prev_app: Mutex<Option<i32>>,
     /// Start of the current round trip. Only used for measurement.
     t0: Mutex<Option<Instant>>,
+    /// Whether the *current* session is allowed sound. Deliberately not
+    /// persisted: a stored preference would be a setting, and more to the point
+    /// music that always starts with the session is a cue that work has begun,
+    /// which is worth more than saving one menu click on the rare day you need
+    /// silence.
+    music: Mutex<bool>,
 }
 
 fn log_since(t0: Instant, stage: &str) {
@@ -106,8 +119,12 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // capitalised menu on the system read as a defect rather than a style.
     let open = MenuItem::with_id(app, "open", "Zapisano", true, None::<&str>)?;
     let abandon = MenuItem::with_id(app, "abandon", "Prekini sesiju", true, None::<&str>)?;
+    // Here rather than in the widget for the same reason abandoning is: rare,
+    // deliberate, and it must cost nothing on the path you take every time.
+    let music = CheckMenuItem::with_id(app, "music", "Muzika", true, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &abandon, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &abandon, &music, &quit])?;
+    app.manage(TrayItems { music });
 
     // A dedicated template image rather than the app icon: macOS tints template
     // images to match the menu bar, and the app icon is an opaque rounded
@@ -121,6 +138,22 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => open_main(app),
+            "music" => {
+                let state = app.state::<FokusState>();
+                let enabled = match state.music.lock() {
+                    Ok(mut flag) => {
+                        *flag = !*flag;
+                        *flag
+                    }
+                    Err(e) => {
+                        eprintln!("[fokus] music state poisoned: {e}");
+                        return;
+                    }
+                };
+                if let Err(e) = app.emit_to(WIDGET_LABEL, MUSIC_EVENT, enabled) {
+                    eprintln!("[fokus] could not send music state: {e}");
+                }
+            }
             "abandon" => {
                 if let Err(e) = app.emit_to(WIDGET_LABEL, ABANDON_EVENT, ()) {
                     eprintln!("[fokus] could not send abandon: {e}");
@@ -197,6 +230,17 @@ fn set_widget_height(app: AppHandle, height: f64) -> Result<(), String> {
     window
         .set_position(top_left)
         .map_err(|e| format!("could not re-anchor widget: {e}"))
+}
+
+/// Called when a session starts. Sound comes back for every new session, so the
+/// tick has to come back with it.
+#[tauri::command]
+fn reset_music(app: AppHandle, state: State<'_, FokusState>) -> Result<(), String> {
+    *state.music.lock().map_err(|e| e.to_string())? = true;
+    app.state::<TrayItems>()
+        .music
+        .set_checked(true)
+        .map_err(|e| format!("could not update the music item: {e}"))
 }
 
 #[tauri::command]
@@ -276,6 +320,7 @@ pub fn run() {
             mark,
             restore_focus,
             quit_app,
+            reset_music,
             audio_track,
             set_widget_height
         ])

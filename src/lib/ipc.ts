@@ -20,6 +20,11 @@ export async function audioTrack(): Promise<string | null> {
   return invoke<string | null>('audio_track')
 }
 
+/** Sound returns for every new session, so the tray's tick returns with it. */
+export async function resetMusic(): Promise<void> {
+  await invoke('reset_music')
+}
+
 /** Grows or shrinks the widget without letting it jump: the Rust side puts the
  *  top left corner back after the resize. */
 export async function setWidgetHeight(height: number): Promise<void> {

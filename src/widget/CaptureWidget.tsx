@@ -29,6 +29,7 @@ import {
   failure,
   mark,
   quitApp,
+  resetMusic,
   restoreFocus,
   setWidgetHeight,
 } from '../lib/ipc'
@@ -36,6 +37,7 @@ import {
 const SHORTCUT_EVENT = 'capture:open'
 const ABANDON_EVENT = 'session:abandon'
 const QUIT_EVENT = 'app:quit'
+const MUSIC_EVENT = 'audio:enabled'
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 const CONFIRMATION_MS = 1000
 /** Re-render only. The remaining time is computed from the wall clock, so a
@@ -236,6 +238,13 @@ export function CaptureWidget(): JSX.Element {
 
     const subscriptions: Array<Promise<UnlistenFn>> = [
       listen(SHORTCUT_EVENT, onShortcut),
+      listen<boolean>(MUSIC_EVENT, (event) => {
+        if (event.payload) {
+          if (sessionOf(stateRef.current) !== null) void startAudio()
+        } else {
+          stopAudio()
+        }
+      }),
       listen(ABANDON_EVENT, () => {
         const session = sessionOf(stateRef.current)
         if (session !== null) void finishSession(session, 'abandoned')
@@ -253,7 +262,7 @@ export function CaptureWidget(): JSX.Element {
         pending.then((unlisten) => unlisten()).catch(() => undefined)
       }
     }
-  }, [finishSession, touch])
+  }, [finishSession, touch, startAudio, stopAudio])
 
   // --- window and focus --------------------------------------------------
 
@@ -303,7 +312,11 @@ export function CaptureWidget(): JSX.Element {
       }
       void mark('session started')
       await returnFocus()
-      void startAudio()
+      // Sound comes back for every session: it is the cue that work has begun,
+      // and a silence carried over from yesterday would quietly remove it.
+      resetMusic()
+        .then(() => startAudio())
+        .catch((e: unknown) => console.error('could not reset music:', describeError(e)))
     },
     [returnFocus, startAudio],
   )

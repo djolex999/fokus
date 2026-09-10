@@ -367,3 +367,34 @@ A session slept through records `ended_at` at wake time rather than at its
 planned end, because completion writes `now`. That overstates completed
 sessions. It does not touch the abandonment median, which only reads abandoned
 rows, so it is noted rather than chased.
+
+---
+
+## Music: a tray item, not a start-of-session choice
+
+Asked for on 2026-09-10. It sits against two lines: Session 3 item 1 says "no
+controls of any kind in the UI", and the forbidden features list rules out
+settings beyond a shortcut remap. Three options were put up, and the one first
+recommended was the worst.
+
+**Why a choice at session start was wrong.** Task initiation is the core deficit
+this app is built around. A decision placed at the exact moment of starting taxes
+the hardest moment, and it breaks the one keypress start that the Session 3 warm
+start exists to produce. There is also a reason to want the audio automatic:
+music that begins with every session becomes a conditioned cue that work has
+started, and a per session choice destroys that by making it unreliable.
+
+**What the need actually was.** Not "choose each time" but "sometimes audio is
+impossible", which is rare and deliberate. That is the same shape as abandoning a
+session, and it belongs in the same place for the same reason: off the path taken
+every time.
+
+So music always starts with the session, and the tray silences the current one.
+Per session, never persisted, so no stored preference and no setting. The ♪ glyph
+remains the only indicator, since it already reflects whether sound is actually
+playing rather than whether it was asked for.
+
+**The test of whether this was right:** if the tray item gets used most days,
+the real need was a persisted preference, and the honest response then is to
+amend the forbidden features line rather than keep clicking. If it goes untouched
+for weeks, per session was correct.
