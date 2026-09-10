@@ -18,8 +18,9 @@ jobs:
         include:
           - target: aarch64-apple-darwin      # Apple silicon
           - target: x86_64-apple-darwin       # Intel
-    # No Windows job on purpose: focus.rs is a todo!() there and would ship a
-    # binary that panics on the first capture, which is the entire product.
+    # Windows is implemented but has never been run. It is deliberately not in
+    # the matrix until it has been, because a build that panics on first capture
+    # is worse than no build: the capture loop is the entire product.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

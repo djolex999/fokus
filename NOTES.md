@@ -585,3 +585,65 @@ the symbol for focus. Judged against `[ ]`, an hourglass and an open square by
 rendering all four at 22pt on a dark bar rather than by describing them: brackets
 read as text markup, the hourglass says waiting rather than focus, and the open
 square reads as a selection marquee.
+
+---
+
+## Windows: written, never run
+
+Implemented on 2026-09-10 on a Mac. It compiles for `x86_64-pc-windows-msvc` and
+has not executed once. That distinction matters more here than anywhere else in
+this project, because the capture loop is the product and it is the part that
+cannot be reasoned into working.
+
+### How it was checked without a Windows machine
+
+`cargo check --target x86_64-pc-windows-msvc` on the real crate fails in
+`libsqlite3-sys`, which wants to compile bundled C for Windows and needs an MSVC
+C compiler this machine does not have. That is a transitive dependency, not the
+code in question.
+
+So the Windows module is lifted verbatim out of `focus.rs` into a scratch crate
+whose only dependency is `windows`, and that is checked against the MSVC target.
+It caught a real error immediately: `AttachThreadInput` is in
+`Win32::System::Threading`, not in `Win32::UI::Input::KeyboardAndMouse` where its
+name suggests. Signatures for `IsWindow`, `SetForegroundWindow` and
+`QueryFullProcessImageNameW` were read out of the generated bindings rather than
+recalled.
+
+### What is different from macOS, and why
+
+**A window handle, not a process id.** macOS activates applications; Windows
+activates windows. One process can own several top level windows, and returning
+to the wrong one drops the user in the wrong document. The stored value is now an
+opaque `focus::Target`, a pid on one platform and an HWND on the other, so
+neither has to pretend to be the other.
+
+**`activate_self` does nothing on Windows.** tao's `set_focus` already calls
+`SetForegroundWindow`, and Windows grants foreground rights to the process that
+received the last hotkey, which at that instant is fokus. The macOS counterpart
+exists only because macOS 14 removed the equivalent guarantee.
+
+**`AttachThreadInput` around the restore.** `SetForegroundWindow` is refused
+unless the caller owns the foreground. fokus does own it, having just taken it,
+but the permission is tracked per input queue and the bare call is ignored often
+enough to matter. The attachment is undone immediately: left in place, the two
+threads share an input queue for the rest of the session and one hanging hangs
+the other.
+
+### One bug this found on macOS
+
+The widget printed `⌘⇧Space` from a hardcoded string while Rust separately
+registered the chord. Two places naming one shortcut, and the frontend copy would
+have told Windows users to press a key their keyboard does not have. The label
+now comes from the side that registers it.
+
+### Still to do, and it needs the machine
+
+- Run it. The foreground lock is the part that will or will not work
+- `transparent`, `decorations: false`, `alwaysOnTop`, `skipTaskbar` and `shadow`
+  all mean something different under WebView2
+- `window_pos.rs` does DPI arithmetic written against a mixed DPI *macOS* setup.
+  Windows per monitor DPI is its own problem, and this is exactly where the
+  physical versus logical bug bit the first time
+- Add the `windows-latest` job to `release.yml`, once and only once it has run
+- SmartScreen: unsigned Windows binaries get a harsher warning than Gatekeeper

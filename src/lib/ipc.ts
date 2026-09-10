@@ -26,6 +26,12 @@ export function report(message: string): void {
   void invoke('report', { message })
 }
 
+/** Asked for rather than hardcoded: the side that registers the shortcut is the
+ *  side that gets to name it. */
+export async function shortcutLabel(): Promise<string> {
+  return invoke<string>('shortcut_label')
+}
+
 /** The tray menu is built in Rust before the webview exists, so it is told the
  *  language once the widget knows it. */
 export async function setMenuLabels(labels: {

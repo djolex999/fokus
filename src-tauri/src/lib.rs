@@ -42,8 +42,9 @@ struct TrayItems {
 
 #[derive(Default)]
 struct FokusState {
-    /// Application that was frontmost when the shortcut fired.
-    prev_app: Mutex<Option<i32>>,
+    /// What had focus when the shortcut fired. A process id on macOS, a window
+    /// handle on Windows; opaque either way.
+    prev_app: Mutex<Option<focus::Target>>,
     /// Start of the current round trip. Only used for measurement.
     t0: Mutex<Option<Instant>>,
     /// Whether the *current* session is allowed sound. Deliberately not
@@ -66,7 +67,7 @@ fn log_since(t0: Instant, stage: &str) {
 /// application has to be recorded before anything of ours takes focus.
 fn open_capture(app: &AppHandle) {
     let t0 = Instant::now();
-    let prev = focus::frontmost_pid();
+    let prev = focus::frontmost();
 
     let state = app.state::<FokusState>();
     if let Ok(mut slot) = state.t0.lock() {
@@ -74,10 +75,10 @@ fn open_capture(app: &AppHandle) {
     }
     if let Ok(mut slot) = state.prev_app.lock() {
         // Pressing the shortcut again while the widget already has focus would
-        // otherwise record fokus as the app to return to, and the round trip
-        // would end on the widget instead of the editor.
-        let is_us = prev == Some(std::process::id() as i32);
-        if !is_us {
+        // otherwise record fokus as the thing to return to, and the round trip
+        // would end on the widget instead of the editor. The test is platform
+        // specific: a process on macOS, a window on Windows.
+        if !prev.is_some_and(focus::is_self) {
             *slot = prev;
         }
     }
@@ -301,10 +302,10 @@ fn restore_focus(app: AppHandle, state: State<'_, FokusState>) -> Result<(), Str
         .take();
 
     let result = match prev {
-        Some(pid) => {
-            let outcome = focus::activate_pid(&app, pid);
+        Some(handle) => {
+            let outcome = focus::activate(&app, handle);
             if cfg!(debug_assertions) && outcome.is_ok() {
-                let target = focus::app_name(pid);
+                let target = focus::app_name(handle);
                 // Verification only. The activation call reports that the request
                 // was accepted, not that focus moved, so look again once macOS has
                 // had a chance to act on it.
@@ -343,6 +344,24 @@ fn capture_shortcut() -> Shortcut {
     }
 }
 
+/// What the widget prints when idle.
+///
+/// Lives beside the registration rather than in the frontend, which had it
+/// hardcoded as the macOS chord. Two places naming one shortcut is one place too
+/// many, and the copy that was wrong would have told Windows users to press a
+/// key their keyboard does not have.
+#[tauri::command]
+fn shortcut_label() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "⌘⇧Space"
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "Ctrl+Shift+Space"
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(
@@ -358,6 +377,7 @@ pub fn run() {
             quit_app,
             reset_music,
             set_menu_labels,
+            shortcut_label,
             audio_track,
             set_widget_height
         ])

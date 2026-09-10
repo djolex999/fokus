@@ -36,6 +36,7 @@ import {
   report,
   resetMusic,
   restoreFocus,
+  shortcutLabel,
   setMenuLabels,
   setWidgetHeight,
 } from '../lib/ipc'
@@ -77,6 +78,7 @@ export function CaptureWidget(): JSX.Element {
    *  state it lands in is the one it was already in. */
   const [focusTick, setFocusTick] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [shortcut, setShortcut] = useState('')
 
   const inputRef = useRef<HTMLInputElement | null>(null)
   const lastHeartbeat = useRef<number>(0)
@@ -175,6 +177,10 @@ export function CaptureWidget(): JSX.Element {
 
   useEffect(() => {
     const prepare = async (): Promise<void> => {
+      shortcutLabel()
+        .then(setShortcut)
+        .catch((e: unknown) => report(`could not read the shortcut: ${describeError(e)}`))
+
       setMenuLabels({
         open: t.trayOpen,
         abandon: t.trayAbandon,
@@ -499,7 +505,7 @@ export function CaptureWidget(): JSX.Element {
 
   return (
     <div className="widget" data-tauri-drag-region>
-      {renderBody(state, now, lastMinute, inputRef, onChange, onKeyDown)}
+      {renderBody(state, now, lastMinute, shortcut, inputRef, onChange, onKeyDown)}
       {error !== null && <div className="error">{error}</div>}
       {playing && <div className="playing">♪</div>}
       {session !== null && state.kind !== 'finished' && (
@@ -517,6 +523,7 @@ function renderBody(
   state: WidgetState,
   now: number,
   lastMinute: boolean,
+  shortcut: string,
   inputRef: MutableRefObject<HTMLInputElement | null>,
   onChange: (event: ChangeEvent<HTMLInputElement>) => void,
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void,
@@ -525,7 +532,7 @@ function renderBody(
     case 'idle':
       return (
         <div className="hint" data-tauri-drag-region>
-          ⌘⇧Space
+          {shortcut}
         </div>
       )
 
