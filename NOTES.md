@@ -647,3 +647,35 @@ now comes from the side that registers it.
   physical versus logical bug bit the first time
 - Add the `windows-latest` job to `release.yml`, once and only once it has run
 - SmartScreen: unsigned Windows binaries get a harsher warning than Gatekeeper
+
+---
+
+## A pattern worth naming: tests that report a failure that is not there
+
+Three times in one day a check of mine reported a problem that did not exist, and
+each time the wrong answer was momentarily convincing.
+
+- Grepping the installed app bundle for new strings returned five misses, which
+  looked like a stale install. Tauri compresses embedded assets, so grep cannot
+  find *any* of them. The tell was that a string present since Session 2 also came
+  back missing.
+- `pnpm install --frozen-lockfile --dry-run` reported the lockfile out of sync.
+  `--dry-run` is not valid in that combination; the real command passes.
+- `cargo check --target x86_64-pc-windows-msvc` failed in `libsqlite3-sys`, which
+  reads as "the Windows code does not compile". It was a transitive dependency
+  wanting a C compiler, and the Windows code compiles fine when checked in
+  isolation.
+
+The rule that would have caught all three: **a check that reports failure for
+something known to be present is broken, not informative.** Test the test against
+a case whose answer you already know before believing it about a case you do not.
+
+## And one about diagnosis
+
+The landing page demo silently did nothing on Enter. Four rounds went into
+theorising about which element a closure had captured, with the page state moving
+between each inspection. Rewriting it with one delegated handler and an explicit
+state variable fixed it immediately and removed the whole class of bug.
+
+Reaching for the structural fix earlier would have been faster than continuing to
+excavate. The signal to switch is when the same hypothesis keeps almost fitting.

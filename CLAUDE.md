@@ -2,7 +2,7 @@
 
 Tauri v2 desktop app. Local-first focus timer built around one mechanic: capturing an intrusive thought faster than following it.
 
-Personal tool, single user, no product infrastructure. Every decision below is deliberate and pre-argued; do not "improve" past them.
+Built as a personal tool, single user. Open sourced 2026-09-10 (MIT, public repo, GitHub Pages, tagged releases) after the build was finished; the constraints below were written for the personal version and still hold, because they are what the product is. Every decision below is deliberate and pre-argued; do not "improve" past them.
 
 ## Non-negotiable constraints
 
@@ -15,7 +15,7 @@ Personal tool, single user, no product infrastructure. Every decision below is d
 
 ## Forbidden features (do not implement, do not suggest inline)
 
-Daily streaks, points, levels, badges, any comparison to other users. Notifications of any kind. Cloud sync, accounts, auth. Mobile version. Task management (projects, tags, priorities, due dates). Calendar integration. AI anything. Themes or settings beyond shortcut remap. Landing page, domain, analytics.
+Daily streaks, points, levels, badges, any comparison to other users. Notifications of any kind. Cloud sync, accounts, auth. Mobile version. Task management (projects, tags, priorities, due dates). Calendar integration. AI anything. Themes or settings beyond shortcut remap. Analytics or telemetry of any kind, on the app or the site. (A landing page and a domain were forbidden while this was private; publishing overruled that on 2026-09-10. Analytics did not become acceptable with it.)
 
 Audio specifically: no playlist screen, no skip, no volume slider, no sound library, no tone generator, no network audio source including YouTube.
 
@@ -32,12 +32,16 @@ The only reward mechanic permitted is the return counter (Session 3).
 
 Dependency budget: if a package is not required by the constraints above, do not add it. Every dependency is maintenance cost on a personal tool.
 
+Taken deliberately, each because Tauri has no API for the job: `objc2` and `objc2-app-kit` for macOS focus return, `windows` for the same on Windows. No frontend dependency has been added since the scaffold.
+
 ## Windows
 
 | Window | Label | Size | Behavior |
 |---|---|---|---|
-| Widget | `widget` | 280×80, grows to ~280×150 | Frameless, always-on-top, no taskbar entry, skip decorations, not resizable |
+| Widget | `widget` | 280×80, grows to ~280×150 | Frameless, always-on-top, `skipTaskbar`, skip decorations, not resizable |
 | Main | `main` | 900×620 | Standard, hidden on launch, opened only by tray/menu or user action |
+
+"No taskbar entry" means that window, not the application. It was first read as macOS `ActivationPolicy::Accessory`, which hides fokus from the Dock entirely and takes the running indicator with it. Reversed to `Regular` on 2026-09-10.
 
 Widget grows **downward** when the resume panel shows. Anchor top-left; do not recenter on resize or the window jumps out from under the cursor.
 
