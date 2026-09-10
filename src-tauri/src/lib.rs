@@ -434,12 +434,16 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("fokus failed to start")
-        .run(|_app, event| {
+        .run(|_app, _event| {
             // Clicking the dock icon must not open the main window. Constraint 3
             // says it opens only when the user opens it, and a dock click is a
             // request to see the app, not a request to see that window. The
             // widget is always on screen already, so there is nothing to do.
-            if let tauri::RunEvent::Reopen { .. } = event {}
+            //
+            // Reopen is a macOS concept, applicationShouldHandleReopen, and the
+            // variant does not exist elsewhere. Windows has no dock to click.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {}
         });
 }
 
