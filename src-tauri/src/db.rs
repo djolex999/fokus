@@ -53,5 +53,16 @@ pub fn migrations() -> Vec<Migration> {
                   VALUES (1, '__seed__', 25, '1970-01-01T00:00:00Z');",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            // Session 2 introduces real sessions, so the placeholder from
+            // migration 4 and everything hanging off it goes. Its captures were
+            // typed to test the loop, not to be kept.
+            description: "drop the session 1 placeholder",
+            sql: "DELETE FROM captures WHERE session_id IN
+                    (SELECT id FROM sessions WHERE task = '__seed__');
+                  DELETE FROM sessions WHERE task = '__seed__';",
+            kind: MigrationKind::Up,
+        },
     ]
 }

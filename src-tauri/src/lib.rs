@@ -5,11 +5,20 @@ mod window_pos;
 use std::sync::Mutex;
 use std::time::Instant;
 
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const WIDGET_LABEL: &str = "widget";
+const MAIN_LABEL: &str = "main";
 const CAPTURE_OPEN_EVENT: &str = "capture:open";
+const ABANDON_EVENT: &str = "session:abandon";
+const QUIT_EVENT: &str = "app:quit";
+/// How long the widget gets to close out an in flight session before the app
+/// exits anyway. A failed write must not strand the user in an app that will
+/// not quit; the startup reconcile will catch whatever was missed.
+const QUIT_GRACE_MS: u64 = 1500;
 
 #[derive(Default)]
 struct FokusState {
@@ -63,6 +72,66 @@ fn open_capture(app: &AppHandle) {
     if let Err(e) = app.emit_to(WIDGET_LABEL, CAPTURE_OPEN_EVENT, ()) {
         eprintln!("[fokus] could not notify widget: {e}");
     }
+}
+
+/// The only way the main window is ever shown. It never opens by itself.
+fn open_main(app: &AppHandle) {
+    let Some(window) = app.get_webview_window(MAIN_LABEL) else {
+        eprintln!("[fokus] main window is gone");
+        return;
+    };
+    focus::activate_self(app);
+    if let Err(e) = window.show() {
+        eprintln!("[fokus] could not show main window: {e}");
+        return;
+    }
+    if let Err(e) = window.set_focus() {
+        eprintln!("[fokus] could not focus main window: {e}");
+    }
+}
+
+fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let open = MenuItem::with_id(app, "open", "zapisano", true, None::<&str>)?;
+    let abandon = MenuItem::with_id(app, "abandon", "prekini sesiju", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "izađi", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &abandon, &quit])?;
+
+    // A dedicated template image rather than the app icon: macOS tints template
+    // images to match the menu bar, and the app icon is an opaque rounded
+    // rectangle that would come out as a solid black block.
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+
+    TrayIconBuilder::new()
+        .icon(icon)
+        .icon_as_template(true)
+        .menu(&menu)
+        .show_menu_on_left_click(true)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => open_main(app),
+            "abandon" => {
+                if let Err(e) = app.emit_to(WIDGET_LABEL, ABANDON_EVENT, ()) {
+                    eprintln!("[fokus] could not send abandon: {e}");
+                }
+            }
+            "quit" => {
+                if let Err(e) = app.emit_to(WIDGET_LABEL, QUIT_EVENT, ()) {
+                    eprintln!("[fokus] could not send quit: {e}");
+                }
+                let handle = app.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(QUIT_GRACE_MS));
+                    handle.exit(0);
+                });
+            }
+            other => eprintln!("[fokus] unhandled tray item: {other}"),
+        })
+        .build(app)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -133,7 +202,7 @@ pub fn run() {
                 .build(),
         )
         .manage(FokusState::default())
-        .invoke_handler(tauri::generate_handler![mark, restore_focus])
+        .invoke_handler(tauri::generate_handler![mark, restore_focus, quit_app])
         .setup(|app| {
             // No dock icon and no app switcher entry: the widget is furniture,
             // not an application the user is meant to switch into.
@@ -150,6 +219,22 @@ pub fn run() {
                 .ok_or("widget window is not declared in tauri.conf.json")?;
             window_pos::restore_or_place(&widget)?;
             window_pos::watch(&widget);
+
+            build_tray(app.handle())?;
+
+            // Closing the main window hides it instead of destroying it, so the
+            // tray can bring it back. Nothing else may open it.
+            if let Some(main) = app.get_webview_window(MAIN_LABEL) {
+                let closing = main.clone();
+                main.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        if let Err(e) = closing.hide() {
+                            eprintln!("[fokus] could not hide main window: {e}");
+                        }
+                    }
+                });
+            }
 
             let shortcut = capture_shortcut();
             app.handle().plugin(

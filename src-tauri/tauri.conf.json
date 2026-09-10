@@ -25,7 +25,8 @@
         "skipTaskbar": true,
         "focus": false,
         "visible": true,
-        "shadow": true
+        "shadow": true,
+        "transparent": true
       },
       {
         "label": "main",
@@ -40,7 +41,8 @@
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'; connect-src 'self' ipc: http://ipc.localhost"
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,

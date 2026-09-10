@@ -117,3 +117,55 @@ applied as 2848 logical and the window sat off the right edge of the screen in
 dead space, still reported as on screen by `CGWindowListCopyWindowInfo`.
 `window_pos.rs` now does all of its arithmetic in logical units and sets a
 `LogicalPosition`, which no scale factor touches.
+
+---
+
+## Session 2 — sessions
+
+### Decisions taken during the session
+
+- **The widget state union absorbed the session** rather than sitting beside a
+  separate one. `CLAUDE.md` specifies a four variant `CaptureState`, but Session 2
+  needs states it cannot express: a session running but not being captured into,
+  and a session being started. Two parallel unions would have reintroduced the
+  exact problem the original was written to prevent, since 'capturing' with no
+  session would be representable and meaningless. idle, capturing and confirmed
+  all survive, each now carrying its session. See `src/types/session.ts`.
+- **Abandon lives in the tray, not on Escape.** The plan confirmation said Escape
+  while running would abandon. That turned out to be unbuildable: the widget only
+  holds keyboard focus while capturing or starting, so there is no "running and
+  focused" state for Escape to mean anything in. The alternatives were double
+  Escape or abandoning on an empty capture, both of which put a destructive action
+  on the most common keystroke in the app. The tray is the right home for a rare,
+  deliberate action.
+- **A tray was built although Session 2 does not list one.** Item 6 requires the
+  main window to be reachable and `CLAUDE.md` says only tray or menu may open it,
+  so item 6 is unbuildable without it. It also supplies the ⌘Q that the Accessory
+  activation policy removed in Session 1. Core Tauri, no new dependency.
+- **`last_active_at` is written on session start, capture open and capture
+  commit.** "Any widget interaction" taken literally would be a disk write per
+  keystroke, for a column read once per session.
+- **Startup reconciliation is the load bearing half of item 7.** Marking a session
+  abandoned on shutdown only covers a clean exit; a crash, a SIGINT or a force quit
+  leaves `ended_at` null forever. `reconcileOpenSessions` closes anything left open
+  by a previous run, using `last_active_at` as `ended_at` rather than now, because
+  the user stopped working when they stopped interacting.
+- **Migration 5 deletes the placeholder** session and its captures. One of those
+  13 rows was a real capture, `odraditi video za posao`, which went with it.
+
+### Known consequence, undecided
+
+A restart mid session always abandons it, including a `tauri dev` reload after a
+file save. That is item 7 applied literally. The alternative is to adopt an open
+session on startup when its planned window has not elapsed and abandon only the
+expired ones, which is better behaviour after a crash but contradicts item 7 as
+written. Built as specified, flagged, not decided.
+
+### Verification
+
+Countdown maths checked directly against `remainingSeconds` and
+`formatCountdown`, including the case that matters: waking three hours into a
+25 minute session returns 0 rather than a negative or a wrapped value. Clock
+moved backwards returns more time rather than crashing.
+
+The interactive acceptance list is not yet run.

@@ -1,12 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
+import type { PlannedMinutes, RunningSession } from '../types/session'
 
 const DB_URL = 'sqlite:fokus.db'
-
-/**
- * Session 1 has no session lifecycle, so captures hang off the seeded row
- * created by migration 4. Session 2 replaces this with the live session id.
- */
-export const PLACEHOLDER_SESSION_ID = 1
 
 let connection: Promise<Database> | null = null
 
@@ -19,9 +14,83 @@ export function db(): Promise<Database> {
   return connection
 }
 
-/** Warms the connection at startup so the first capture is not the slow one. */
 export async function openDatabase(): Promise<void> {
   await db()
+}
+
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
+/**
+ * Closes out sessions left open by a previous run.
+ *
+ * Marking a session abandoned on shutdown only covers a clean exit. A crash, a
+ * SIGINT, or a force quit leaves `ended_at` null forever, and the next launch
+ * would otherwise adopt a stale session as live. Reconciling at startup covers
+ * every one of those, so it is the load bearing half of the pair.
+ *
+ * `ended_at` falls back to `last_active_at` rather than now, because the user
+ * stopped working when they stopped interacting, not when they next opened
+ * the app. Where there was no interaction at all, `started_at` is the only
+ * honest answer.
+ */
+export async function reconcileOpenSessions(): Promise<number> {
+  const conn = await db()
+  const result = await conn.execute(
+    `UPDATE sessions
+        SET outcome = 'abandoned',
+            ended_at = COALESCE(last_active_at, started_at)
+      WHERE ended_at IS NULL`,
+  )
+  return result.rowsAffected
+}
+
+export async function startSession(
+  task: string,
+  plannedMin: PlannedMinutes,
+): Promise<RunningSession> {
+  const conn = await db()
+  const startedAt = nowIso()
+  const result = await conn.execute(
+    `INSERT INTO sessions (task, planned_min, started_at, last_active_at)
+     VALUES ($1, $2, $3, $3)`,
+    [task, plannedMin, startedAt],
+  )
+  // The sqlite driver only omits this if the insert did not happen.
+  if (result.lastInsertId === undefined) {
+    throw new Error('session insert returned no id')
+  }
+  return { id: result.lastInsertId, task, plannedMin, startedAt }
+}
+
+export async function endSession(
+  sessionId: number,
+  outcome: 'completed' | 'abandoned',
+): Promise<void> {
+  const conn = await db()
+  await conn.execute(
+    `UPDATE sessions SET outcome = $1, ended_at = $2 WHERE id = $3 AND ended_at IS NULL`,
+    [outcome, nowIso(), sessionId],
+  )
+}
+
+/** Written on session start, capture open and capture commit. Not per keystroke:
+ *  that would be a disk write per character for a field read once a session. */
+export async function touchSession(sessionId: number): Promise<void> {
+  const conn = await db()
+  await conn.execute(`UPDATE sessions SET last_active_at = $1 WHERE id = $2`, [
+    nowIso(),
+    sessionId,
+  ])
+}
+
+export async function insertCapture(sessionId: number, text: string): Promise<void> {
+  const conn = await db()
+  await conn.execute(
+    'INSERT INTO captures (session_id, text, created_at) VALUES ($1, $2, $3)',
+    [sessionId, text, nowIso()],
+  )
 }
 
 /** Derived on demand, never stored. A counter column would be duplicate state
@@ -39,10 +108,27 @@ export async function countCaptures(sessionId: number): Promise<number> {
   return first.n
 }
 
-export async function insertCapture(sessionId: number, text: string): Promise<void> {
+export type Resolution = 'done' | 'scheduled' | 'deleted'
+
+export type PendingCapture = {
+  id: number
+  text: string
+  created_at: string
+  task: string
+}
+
+export async function pendingCaptures(): Promise<PendingCapture[]> {
   const conn = await db()
-  await conn.execute(
-    'INSERT INTO captures (session_id, text, created_at) VALUES ($1, $2, $3)',
-    [sessionId, text, new Date().toISOString()],
+  return conn.select<PendingCapture[]>(
+    `SELECT c.id, c.text, c.created_at, s.task
+       FROM captures c
+       JOIN sessions s ON s.id = c.session_id
+      WHERE c.resolved IS NULL
+      ORDER BY c.created_at DESC`,
   )
+}
+
+export async function resolveCapture(id: number, resolution: Resolution): Promise<void> {
+  const conn = await db()
+  await conn.execute('UPDATE captures SET resolved = $1 WHERE id = $2', [resolution, id])
 }

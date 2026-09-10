@@ -113,7 +113,7 @@ ASRS, statistics, packaging.
    - One line: returns this week vs last week
    - Bars are divs. No chart library.
 4. **"Pripremi za pregled"**: a print stylesheet producing a single page with the ASRS result, the statistics, and the date range covered. Browser print to PDF is sufficient; do not add a PDF library.
-5. **Packaging:** build an installer for the dev platform, install it, and use the installed build rather than `pnpm tauri dev`.
+5. ~~**Packaging:**~~ Pulled forward to the end of Session 2 on 2026-09-10, because the working day gate in Session 2 cannot be run against `pnpm tauri dev`: a file save reloads the app and abandons the live session. Build an installer, install it, and use the installed build.
 
 ### Acceptance
 

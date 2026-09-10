@@ -1,6 +1,11 @@
 :root {
-  --bg: #111113;
-  --fg: #e8e8ec;
+  --bg: #0e0e10;
+  --raised: #16161a;
+  --fg: #ededf2;
+  --muted: #7c7c86;
+  --dim: #55555e;
+  --line: #232329;
+  --error: #c08a63;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -15,10 +20,107 @@ body {
   color: var(--fg);
   font-family: var(--font);
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
-.placeholder {
-  padding: 32px;
-  font-size: 18px;
+.screen {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 56px 36px 72px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 18px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.header h1 {
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.count {
+  color: var(--dim);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Neutral, not congratulatory. An empty list is a fact, not an achievement. */
+.empty {
+  color: var(--dim);
+  padding-top: 28px;
+}
+
+.rows {
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 15px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.text {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--dim);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Held back until the row is under the cursor: three buttons per row shouting
+   for attention would make a list of twenty unreadable. */
+.row-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.row:hover .row-actions,
+.row:focus-within .row-actions {
+  opacity: 1;
+}
+
+.row-actions button {
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11.5px;
+  padding: 5px 11px;
+  border-radius: 5px;
+  cursor: default;
+}
+
+.row-actions button:hover {
+  color: var(--fg);
+  border-color: var(--dim);
+}
+
+.error {
+  color: var(--error);
+  font-size: 12px;
+  padding-top: 18px;
 }

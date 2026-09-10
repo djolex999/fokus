@@ -14,6 +14,11 @@ export async function restoreFocus(): Promise<void> {
   await invoke('restore_focus')
 }
 
+/** Used only by the tray quit path, after any in flight session is closed out. */
+export async function quitApp(): Promise<void> {
+  await invoke('quit_app')
+}
+
 export function describeError(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
