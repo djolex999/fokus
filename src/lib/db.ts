@@ -63,7 +63,7 @@ export async function startSession(
   if (result.lastInsertId === undefined) {
     throw new Error('session insert returned no id')
   }
-  return { id: result.lastInsertId, task, plannedMin, startedAt, lastActiveAt: startedAt }
+  return { id: result.lastInsertId, task, plannedMin, startedAt, lastInteractionAt: startedAt }
 }
 
 export async function endSession(
@@ -79,12 +79,40 @@ export async function endSession(
 
 /** Written on session start, capture open and capture commit. Not per keystroke:
  *  that would be a disk write per character for a field read once a session.
- *  Returns the timestamp written so state can mirror it without a read back. */
+ *  Returns the timestamp written so state can mirror it without a read back.
+ *
+ *  Guarded on `ended_at IS NULL` so a late write cannot disturb a session that
+ *  has already been closed. */
 export async function touchSession(sessionId: number): Promise<string> {
   const conn = await db()
   const at = nowIso()
-  await conn.execute(`UPDATE sessions SET last_active_at = $1 WHERE id = $2`, [at, sessionId])
+  await conn.execute(
+    `UPDATE sessions SET last_active_at = $1 WHERE id = $2 AND ended_at IS NULL`,
+    [at, sessionId],
+  )
   return at
+}
+
+/**
+ * Liveness, written once a minute while a session runs.
+ *
+ * Without it, `last_active_at` only advances when the user interacts, so a
+ * session with no captures that does not end cleanly reconciles to
+ * `ended_at = started_at` and records as zero minutes. That is the exact
+ * opposite of the sessions worth measuring accurately, and it drags down the
+ * median time to abandonment, which is the one number meant for a clinician.
+ *
+ * Deliberately does not report back into widget state. The resume panel asks
+ * "how long since the user did something", and a heartbeat is not the user
+ * doing something; feeding this into that clock would mean the panel never
+ * appears again.
+ */
+export async function heartbeatSession(sessionId: number): Promise<void> {
+  const conn = await db()
+  await conn.execute(
+    `UPDATE sessions SET last_active_at = $1 WHERE id = $2 AND ended_at IS NULL`,
+    [nowIso(), sessionId],
+  )
 }
 
 /** The task and duration of the session most recently abandoned, for the warm

@@ -14,6 +14,7 @@ import type { PlannedMinutes, RunningSession, WidgetState } from '../types/sessi
 import {
   countCaptures,
   endSession,
+  heartbeatSession,
   insertCapture,
   lastAbandonedSession,
   openDatabase,
@@ -44,6 +45,9 @@ const TICK_MS = 1000
  *  bare input. */
 const RESUME_AFTER_MS = 5 * 60 * 1000
 const RESUME_RECENT = 3
+/** How often a running session records that it is still alive. The worst case
+ *  error this leaves in a reconciled session length is one interval. */
+const HEARTBEAT_MS = 60_000
 const WIDGET_HEIGHT = 80
 const WIDGET_HEIGHT_RESUMED = 150
 const LAST_MINUTE_S = 60
@@ -62,6 +66,7 @@ export function CaptureWidget(): JSX.Element {
   const [playing, setPlaying] = useState(false)
 
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const lastHeartbeat = useRef<number>(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const fadeRef = useRef<number | null>(null)
 
@@ -178,6 +183,20 @@ export function CaptureWidget(): JSX.Element {
     [stopAudio],
   )
 
+  // Records that the session is still alive, riding the tick that is already
+  // running. Without this a session with no captures that does not end cleanly
+  // reconciles to zero minutes, because the only thing that ever advanced
+  // last_active_at was the user interacting.
+  useEffect(() => {
+    const session = sessionOf(state)
+    if (session === null || state.kind === 'finished') return
+    if (now - lastHeartbeat.current < HEARTBEAT_MS) return
+    lastHeartbeat.current = now
+    heartbeatSession(session.id).catch((e: unknown) =>
+      console.error('could not record liveness:', describeError(e)),
+    )
+  }, [state, now])
+
   // The countdown running out ends the session. Derived from the wall clock, so
   // this fires correctly on the first tick after the machine wakes from sleep.
   useEffect(() => {
@@ -201,7 +220,7 @@ export function CaptureWidget(): JSX.Element {
         return
       }
 
-      const away = Date.now() - Date.parse(session.lastActiveAt)
+      const away = Date.now() - Date.parse(session.lastInteractionAt)
       if (current.kind === 'running' && away > RESUME_AFTER_MS) {
         recentCaptureTexts(session.id, RESUME_RECENT)
           .then((recent) => dispatch({ type: 'resume', recent }))

@@ -21,9 +21,14 @@ export type RunningSession = {
   plannedMin: PlannedMinutes
   /** ISO 8601 UTC. The countdown is derived from this against the wall clock. */
   startedAt: string
-  /** ISO 8601 UTC. Drives the resume panel, so it is mirrored in state rather
-   *  than read back from the database on every shortcut press. */
-  lastActiveAt: string
+  /**
+   * ISO 8601 UTC of the last time the *user* did something, which is not the
+   * same as the last time the session was alive. The database column also
+   * receives a once a minute heartbeat so an interrupted session can be
+   * reconciled to a truthful length; this field must not, or the resume panel
+   * would never fire again.
+   */
+  lastInteractionAt: string
 }
 
 export type WidgetState =
@@ -112,7 +117,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
     case 'touched': {
       const session = sessionOf(state)
       if (session === null) return state
-      const touched = { ...session, lastActiveAt: action.at }
+      const touched = { ...session, lastInteractionAt: action.at }
       switch (state.kind) {
         case 'running':
           return { kind: 'running', session: touched }

@@ -294,3 +294,61 @@ that one.
 The questionnaire, the statistics screen and the print dialog have not been
 exercised by hand. Statistics need ten sessions before they render at all, and
 there are currently zero.
+
+---
+
+## The last_active_at bug
+
+Found by accident while seeding test data on 2026-09-10. A real session,
+`RADIM SATOR`, ran about two minutes and recorded `ended_at` identical to
+`started_at`: zero minutes.
+
+### Cause
+
+`last_active_at` only advanced when the user interacted (session start, capture
+open, capture commit). Start a session, never press the shortcut again, and it
+stays pinned at `started_at`. When the app then goes away without a clean quit,
+startup reconciliation falls back to `COALESCE(last_active_at, started_at)` and
+writes a zero length session.
+
+So any session where nothing was captured, and which did not end cleanly,
+recorded as zero. That is the exact opposite of the sessions worth measuring
+accurately, and it silently drags down the median time to abandonment, the one
+number in Session 4 intended for a clinician.
+
+### The trap in the obvious fix
+
+Heartbeating into `last_active_at` alone breaks the resume panel. That panel
+fires when `now - last_active_at > 5 min`, meaning "how long since the user did
+something". A heartbeat is not the user doing something, and feeding it into
+that clock would mean the panel never appears again.
+
+The column and the field therefore mean different things now, and are named
+accordingly:
+
+- **`sessions.last_active_at`** is liveness: user interactions plus a once a
+  minute heartbeat. Reconciliation reads it.
+- **`RunningSession.lastInteractionAt`**, in memory only, is the last user
+  interaction. The resume panel reads it. The heartbeat never writes to it.
+
+No migration: the column's meaning widened to a superset of what it held before,
+and the resume panel's clock never needed to survive a restart, because a
+restart abandons the session anyway.
+
+Both writes are guarded on `ended_at IS NULL`, so a late heartbeat cannot
+disturb a session that has already been closed.
+
+### Verified
+
+Four checks against a scratch database: an eight minute session with no captures
+now records eight minutes rather than zero; the same session without a heartbeat
+still records zero, which is the bug reproduced for contrast; a late heartbeat
+cannot modify a closed session; and the understatement is bounded by one
+interval.
+
+### Related, not fixed
+
+A session slept through records `ended_at` at wake time rather than at its
+planned end, because completion writes `now`. That overstates completed
+sessions. It does not touch the abandonment median, which only reads abandoned
+rows, so it is noted rather than chased.
