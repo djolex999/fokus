@@ -539,3 +539,33 @@ dismissed as decoration, one styled as a footnote gets read once and believed.
 
 The printed page still fits: 200.6mm of the 269mm available, so the disclaimer
 cost 10mm of a 78mm margin.
+
+
+---
+
+## Two more found by using it
+
+### "End session" appeared broken
+
+The tray item checked for a live session and silently did nothing when there was
+not one, so once a session had completed and the widget sat at 0:00 it looked
+dead. It now clears whatever is on screen: a finished 0:00, or a half typed task.
+
+### 0:00 had nothing to clear it
+
+`finished` was written to hold until the next shortcut press, so completion would
+be observable. Nothing else cleared it, which is the bug above, and a bare 0:00
+carries no timestamp, so once you have looked away it no longer tells you whether
+the session ended a minute ago or this morning. It now clears itself after a
+minute. Long enough to be seen if you look up, short enough never to be stale.
+
+### Tray icon: third attempt
+
+A filled dot was too generic to find. A ring with a dot in the middle was
+distinctive and also the universal record button, which in a menu bar is the
+worst thing it could be mistaken for. It is now camera focus brackets, four
+corner marks around empty space: an unusual silhouette up there, and literally
+the symbol for focus. Judged against `[ ]`, an hourglass and an open square by
+rendering all four at 22pt on a dark bar rather than by describing them: brackets
+read as text markup, the hourglass says waiting rather than focus, and the open
+square reads as a selection marquee.

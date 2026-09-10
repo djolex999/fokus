@@ -47,6 +47,10 @@ const MUSIC_EVENT = 'audio:enabled'
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 const SESSIONS_CLEARED_EVENT = 'sessions:cleared'
 const CONFIRMATION_MS = 1000
+/** How long the widget holds at 0:00 after a session ends. Long enough to be
+ *  seen if you look up; short enough that it never becomes a stale 0:00 with no
+ *  timestamp, which says nothing about whether it happened now or an hour ago. */
+const FINISHED_MS = 60_000
 /** Re-render only. The remaining time is computed from the wall clock, so a
  *  missed or delayed tick costs nothing but a stale frame. */
 const TICK_MS = 1000
@@ -319,7 +323,14 @@ export function CaptureWidget(): JSX.Element {
       }),
       listen(ABANDON_EVENT, () => {
         const session = sessionOf(stateRef.current)
-        if (session !== null) void finishSession(session, 'abandoned')
+        if (session !== null) {
+          void finishSession(session, 'abandoned')
+          return
+        }
+        // No session to end, but the widget may still be showing 0:00 from one
+        // that finished, or a half typed task. "End session" should clear
+        // whatever is on screen rather than appear broken.
+        dispatch({ type: 'dismiss' })
       }),
       listen(QUIT_EVENT, () => {
         const session = sessionOf(stateRef.current)
@@ -363,6 +374,15 @@ export function CaptureWidget(): JSX.Element {
   useEffect(() => {
     if (state.kind !== 'confirmed') return
     const timer = window.setTimeout(() => dispatch({ type: 'captureDismissed' }), CONFIRMATION_MS)
+    return () => window.clearTimeout(timer)
+  }, [state.kind])
+
+  // A finished session used to sit at 0:00 until the shortcut was pressed, on
+  // the reasoning that completion should be observable. Nothing else cleared it,
+  // so it read as stuck, and an old 0:00 carries no information anyway.
+  useEffect(() => {
+    if (state.kind !== 'finished') return
+    const timer = window.setTimeout(() => dispatch({ type: 'dismiss' }), FINISHED_MS)
     return () => window.clearTimeout(timer)
   }, [state.kind])
 
