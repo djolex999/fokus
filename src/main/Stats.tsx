@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MINIMUM_SESSIONS, computeStats } from '../types/stats'
 import type { Stats as StatsData } from '../types/stats'
-import { allCaptureTimes, allSessions } from '../lib/db'
+import { emit } from '@tauri-apps/api/event'
+import { allCaptureTimes, allSessions, clearAllSessions } from '../lib/db'
 import { failure } from '../lib/ipc'
 import { formatDate } from './format'
 
@@ -49,6 +50,7 @@ export function Stats(): JSX.Element {
           Treba još {remaining} {pluralSessions(remaining)} pre nego što brojevi počnu da znače
           nešto.
         </p>
+        {stats.sessionCount > 0 && <ClearSessions onCleared={load} />}
       </div>
     )
   }
@@ -65,6 +67,50 @@ export function Stats(): JSX.Element {
       </header>
 
       <StatsBody stats={stats} />
+      <ClearSessions onCleared={load} />
+    </div>
+  )
+}
+
+/**
+ * Two steps, because this is not undoable and the numbers behind it took weeks
+ * to accumulate. Inline rather than a dialog: a modal over an anti-distraction
+ * tool to ask "are you sure" is its own small interruption.
+ */
+function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.Element {
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const clear = useCallback(async (): Promise<void> => {
+    try {
+      await clearAllSessions()
+      setConfirming(false)
+      await onCleared()
+      // The review list is reading the same captures.
+      void emit('captures:changed')
+    } catch (e: unknown) {
+      setError(failure('nije obrisano', e))
+    }
+  }, [onCleared])
+
+  return (
+    <div className="clear">
+      {error !== null && <p className="error">{error}</p>}
+      {confirming ? (
+        <>
+          <span className="clear-warning">briše i sve zapisano, ne i upitnik</span>
+          <button type="button" className="clear-confirm" onClick={() => void clear()}>
+            obriši
+          </button>
+          <button type="button" onClick={() => setConfirming(false)}>
+            otkaži
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)}>
+          obriši sve sesije
+        </button>
+      )}
     </div>
   )
 }

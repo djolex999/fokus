@@ -240,3 +240,22 @@ export async function allCaptureTimes(): Promise<CaptureRow[]> {
   const conn = await db()
   return conn.select<CaptureRow[]>('SELECT session_id, created_at FROM captures')
 }
+
+/**
+ * Deletes every session and every capture. There is no separate "statistics"
+ * to clear: the numbers are derived from these two tables, so clearing them
+ * means deleting the rows they are derived from.
+ *
+ * ASRS results are deliberately left alone. They are a dated record of a
+ * clinical screener rather than a by product of using the timer, and someone
+ * clearing their session history is not asking to lose them.
+ *
+ * Captures go first: `captures.session_id` is a NOT NULL foreign key, so the
+ * other order would leave orphans behind wherever enforcement is off.
+ */
+export async function clearAllSessions(): Promise<{ sessions: number; captures: number }> {
+  const conn = await db()
+  const captures = await conn.execute('DELETE FROM captures')
+  const sessions = await conn.execute('DELETE FROM sessions')
+  return { sessions: sessions.rowsAffected, captures: captures.rowsAffected }
+}
