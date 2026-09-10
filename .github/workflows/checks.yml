@@ -7,9 +7,15 @@ on:
 
 jobs:
   checks:
-    # macOS because the focus return is macOS only; on Linux the stub is a
-    # todo!() and cargo check would be checking nothing that ships.
-    runs-on: macos-latest
+    # Both platforms, because the focus return has a real implementation on each
+    # and they do not share code. A macOS-only check let RunEvent::Reopen reach
+    # a Windows machine: the variant does not exist there, and nothing here
+    # noticed until someone tried to compile it.
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

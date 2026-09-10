@@ -31,7 +31,9 @@ The Serbian rendering of the questionnaire is a translation, not the officially 
 
 ## Install
 
-macOS only for now (Apple silicon and Intel). Download the `.dmg` from [Releases](../../releases), open it, drag `fokus.app` to Applications.
+**macOS** (Apple silicon and Intel): download the `.dmg` from [Releases](../../releases), open it, drag `fokus.app` to Applications.
+
+**Windows**: download the `.msi` or `.exe` from [Releases](../../releases). The shortcut is `Ctrl+Shift+Space`.
 
 The build is **not signed or notarised**, so the first launch needs: right-click the app → Open, or System Settings → Privacy & Security → Open Anyway.
 
@@ -58,7 +60,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ## Known limits
 
-- **Windows is written but unverified.** The focus-return is implemented and compiles for MSVC; it has never been run. No Windows build is published until it has been. See `WINDOWS.md`
+- **Windows works but is new.** The capture loop was verified by hand on 2026-09-10: the shortcut fires, the widget takes the keyboard, and focus returns to the app you were in. Everything outside the loop has had far less use there than on macOS. See `WINDOWS.md`
 - **Unsigned builds** show a Gatekeeper warning, as above
 - **A resumed session starts silent.** The webview only begins audio from a user gesture, and launching the app is not one it can see
 

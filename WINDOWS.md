@@ -1,7 +1,12 @@
 # Running fokus on Windows for the first time
 
-This code has never executed on Windows. It compiles for
-`x86_64-pc-windows-msvc` and that is all that is known about it.
+**The capture loop works.** Verified by hand on 2026-09-10: Ctrl+Shift+Space
+from Notepad, type, Enter, and typing resumes in Notepad without touching the
+mouse. `AttachThreadInput` around `SetForegroundWindow` was the part in doubt and
+it held.
+
+Everything outside the loop has had far less use here than on macOS. This file
+stays because the next person, or the next machine, will hit the same setup.
 
 ## Setup
 
@@ -76,14 +81,12 @@ the handover, which is the known risk and the reason this needs a real machine.
    supports, which is conservative but not wrong.
 5. **Always on top over fullscreen apps**, which Windows treats differently.
 
-## If the capture loop works
+## Three things that cost an evening, none of them the code
 
-Add the Windows job to `.github/workflows/release.yml`:
-
-```yaml
-  - target: x86_64-pc-windows-msvc
-```
-
-and give it `runs-on: windows-latest` via the matrix. It is deliberately absent
-until the loop has been seen to work, because a build that panics on the first
-capture is worse than no build at all.
+- **pnpm.** Its build-script gate rejects `esbuild`, and the setting that allows
+  it has moved twice between versions. The Tauri hooks call `npm` now, so pnpm is
+  not in the path at all.
+- **`link.exe` not found.** The Build Tools workload, arriving only after every
+  crate has downloaded, and reading like a compile error.
+- **Out of memory** compiling the `windows` crate. `$env:CARGO_BUILD_JOBS=1`
+  serialises it and gets under the limit.
