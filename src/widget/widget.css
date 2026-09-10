@@ -92,10 +92,10 @@ body {
 }
 
 .timer {
-  font-size: 24px;
+  font-size: 27px;
   font-weight: 300;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.05;
 }
 
@@ -104,6 +104,13 @@ body {
   align-items: baseline;
   gap: 9px;
   font-size: 11.5px;
+}
+
+/* Names the mode. Carries slightly more weight than the numbers beside it,
+   because it answers the question you have before you have any other. */
+.mode {
+  color: var(--muted);
+  margin-right: 3px;
 }
 
 .duration {
@@ -166,7 +173,8 @@ body {
 
 .progress-fill {
   height: 100%;
-  background: var(--muted);
+  background: var(--fg);
+  opacity: 0.45;
 }
 
 /* The last minute. The bar thickens and the timer warms. Nothing moves, nothing

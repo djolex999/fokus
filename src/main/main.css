@@ -93,13 +93,16 @@ body {
   white-space: nowrap;
 }
 
-/* Held back until the row is under the cursor: three buttons per row shouting
-   for attention would make a list of twenty unreadable. */
+/* Always visible. These were revealed on hover, on the argument that three
+   buttons per row would shout. The opposite is the real cost: an affordance you
+   cannot see is one you have to remember exists, and holding "the buttons appear
+   if I move the mouse there" in your head is precisely the tax this app is
+   supposed to remove. They are quiet instead of hidden. */
 .row-actions {
   display: flex;
   gap: 5px;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 1;
 }
 
 .row:hover .row-actions,
@@ -169,6 +172,19 @@ body {
   padding: 18px 0 4px;
 }
 
+/* The tabs stay put; the header does not. Sticking the header pinned a count to
+   the top while scrolling the navigation away, which trades the thing you need
+   to move around for a number already shown twice, in the header and next to the
+   save button. */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  padding-top: 14px;
+  margin-top: -14px;
+}
+
 /* --- questionnaire ----------------------------------------------------- */
 
 .questions {
@@ -176,46 +192,56 @@ body {
 }
 
 .question {
-  padding: 18px 0;
+  padding: 26px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .question-text {
-  line-height: 1.45;
+  line-height: 1.5;
   display: flex;
-  gap: 9px;
+  gap: 12px;
+  font-size: 15px;
 }
 
+/* Eighteen questions is a wall unless each one is visibly its own unit. The
+   number is the handhold for finding your place again after looking away, which
+   on this questionnaire is not a rare event. */
 .question-number {
-  color: var(--dim);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  padding-top: 2px;
   flex-shrink: 0;
+  min-width: 18px;
 }
 
 /* The source wording, kept next to the translation so the person answering can
    check what was actually asked. This is a clinical instrument, not UI copy. */
 .question-original {
-  color: var(--dim);
-  font-size: 11.5px;
-  line-height: 1.4;
-  padding: 5px 0 0 26px;
+  color: #45454d;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 7px 0 0 30px;
+  max-width: 54em;
 }
 
 .scale {
   display: flex;
-  gap: 5px;
-  padding: 11px 0 0 26px;
+  gap: 6px;
+  padding: 15px 0 0 30px;
   flex-wrap: wrap;
 }
 
+/* Bigger targets. Five small buttons in a row is a precision task, and precision
+   tasks are where attention leaks. */
 .option {
   border: 1px solid var(--line);
   background: var(--raised);
   color: var(--muted);
   font-family: var(--font);
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 5px;
+  font-size: 12.5px;
+  padding: 9px 15px;
+  border-radius: 6px;
   cursor: default;
 }
 
@@ -324,21 +350,27 @@ body {
 /* --- statistics -------------------------------------------------------- */
 
 .stat {
-  padding: 24px 0;
+  padding: 30px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .stat h2 {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  padding-bottom: 12px;
+  color: var(--dim);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding-bottom: 14px;
 }
 
+/* The number is the point of the section. It should be findable by scanning
+   without reading a single label. */
 .figure {
-  font-size: 19px;
+  font-size: 26px;
+  font-weight: 300;
+  color: var(--fg);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .bars {

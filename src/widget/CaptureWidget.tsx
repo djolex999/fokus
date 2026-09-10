@@ -417,7 +417,15 @@ function renderBody(
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
+          {/*
+            States the mode rather than implying it. The same keystroke starts a
+            session here and captures a thought while one runs, and until now the
+            only thing distinguishing them was a placeholder. Remembering which
+            mode you are in is exactly the kind of invisible bookkeeping this app
+            exists to remove.
+          */}
           <div className="durations" data-tauri-drag-region>
+            <span className="mode">nova sesija</span>
             <span className={state.plannedMin === 25 ? 'duration active' : 'duration'}>25</span>
             <span className={state.plannedMin === 50 ? 'duration active' : 'duration'}>50</span>
             <span className="duration-hint">tab</span>

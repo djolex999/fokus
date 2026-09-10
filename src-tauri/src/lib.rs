@@ -96,9 +96,12 @@ fn open_main(app: &AppHandle) {
 }
 
 fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let open = MenuItem::with_id(app, "open", "zapisano", true, None::<&str>)?;
-    let abandon = MenuItem::with_id(app, "abandon", "prekini sesiju", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "izađi", true, None::<&str>)?;
+    // Sentence case here, unlike the rest of the app. The menu bar belongs to
+    // macOS, not to fokus, and lowercase items sitting beside every other
+    // capitalised menu on the system read as a defect rather than a style.
+    let open = MenuItem::with_id(app, "open", "Zapisano", true, None::<&str>)?;
+    let abandon = MenuItem::with_id(app, "abandon", "Prekini sesiju", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &abandon, &quit])?;
 
     // A dedicated template image rather than the app icon: macOS tints template
