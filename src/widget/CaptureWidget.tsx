@@ -29,6 +29,7 @@ import {
   failure,
   mark,
   quitApp,
+  report,
   resetMusic,
   restoreFocus,
   setWidgetHeight,
@@ -85,24 +86,52 @@ export function CaptureWidget(): JSX.Element {
   // Absence is silence, never an error: no folder, an empty folder, or nothing
   // playable in it all leave the session running exactly as it otherwise would.
 
-  const startAudio = useCallback(async (): Promise<void> => {
+  // Loaded once at startup, not at session start. WKWebView only permits audio
+  // to begin from a user gesture, and the gesture's validity does not survive
+  // the awaits between pressing Enter and the track being fetched and decoded.
+  // With the source already in place, play() can be called while the keypress
+  // is still the thing that caused it.
+  useEffect(() => {
     const element = audioRef.current
     if (element === null) return
-    try {
-      const path = await audioTrack()
-      if (path === null) return
-      if (fadeRef.current !== null) {
-        window.clearInterval(fadeRef.current)
-        fadeRef.current = null
-      }
-      element.src = convertFileSrc(path)
-      element.loop = true
-      element.volume = 1
-      await element.play()
-      setPlaying(true)
-    } catch (e: unknown) {
-      console.info('no audio this session:', describeError(e))
+    audioTrack()
+      .then((path) => {
+        if (path === null) {
+          report('audio: no playable file in ~/fokus/audio')
+          return
+        }
+        // Without these two the only signal is silence. A refused asset fetch
+        // and an undecodable file look identical from the outside, and both
+        // look identical to having no music configured at all.
+        element.addEventListener('error', () => {
+          const codes = ['', 'aborted', 'network', 'decode', 'source not supported']
+          const code = element.error?.code ?? 0
+          report(`audio: FAILED (${codes[code] ?? code}) ${element.error?.message ?? ''}`)
+        })
+        element.addEventListener('canplaythrough', () => report('audio: ready to play'), {
+          once: true,
+        })
+        element.src = convertFileSrc(path)
+        element.loop = true
+        element.preload = 'auto'
+        element.load()
+        report(`audio: loading ${element.src}`)
+      })
+      .catch((e: unknown) => report(`audio: could not resolve a track: ${describeError(e)}`))
+  }, [])
+
+  const startAudio = useCallback((): void => {
+    const element = audioRef.current
+    if (element === null || element.src === '') return
+    if (fadeRef.current !== null) {
+      window.clearInterval(fadeRef.current)
+      fadeRef.current = null
     }
+    element.volume = 1
+    element
+      .play()
+      .then(() => setPlaying(true))
+      .catch((e: unknown) => report(`audio: play refused: ${describeError(e)}`))
   }, [])
 
   const stopAudio = useCallback((): void => {
@@ -240,7 +269,7 @@ export function CaptureWidget(): JSX.Element {
       listen(SHORTCUT_EVENT, onShortcut),
       listen<boolean>(MUSIC_EVENT, (event) => {
         if (event.payload) {
-          if (sessionOf(stateRef.current) !== null) void startAudio()
+          if (sessionOf(stateRef.current) !== null) startAudio()
         } else {
           stopAudio()
         }
@@ -313,12 +342,11 @@ export function CaptureWidget(): JSX.Element {
       void mark('session started')
       await returnFocus()
       // Sound comes back for every session: it is the cue that work has begun,
-      // and a silence carried over from yesterday would quietly remove it.
-      resetMusic()
-        .then(() => startAudio())
-        .catch((e: unknown) => console.error('could not reset music:', describeError(e)))
+      // and a silence carried over from yesterday would quietly remove it. The
+      // playing itself already started in the key handler.
+      resetMusic().catch((e: unknown) => report(`could not reset music: ${describeError(e)}`))
     },
-    [returnFocus, startAudio],
+    [returnFocus],
   )
 
   const commitCapture = useCallback(
@@ -367,6 +395,9 @@ export function CaptureWidget(): JSX.Element {
       if (event.key === 'Enter') {
         event.preventDefault()
         if (current.kind === 'starting') {
+          // Synchronous, before any await, so the webview still counts this
+          // keypress as the gesture that started the sound.
+          if (current.draft.trim() !== '') startAudio()
           void beginSession(current.draft, current.plannedMin)
           return
         }
@@ -391,7 +422,7 @@ export function CaptureWidget(): JSX.Element {
         void returnFocus()
       }
     },
-    [beginSession, commitCapture, returnFocus],
+    [beginSession, commitCapture, returnFocus, startAudio],
   )
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {

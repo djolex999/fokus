@@ -20,6 +20,12 @@ export async function audioTrack(): Promise<string | null> {
   return invoke<string | null>('audio_track')
 }
 
+/** Sends a line to the Rust side's stderr. The webview console is unreachable
+ *  in a bundled build, so this is the only way an audio failure is visible. */
+export function report(message: string): void {
+  void invoke('report', { message })
+}
+
 /** Sound returns for every new session, so the tray's tick returns with it. */
 export async function resetMusic(): Promise<void> {
   await invoke('reset_music')

@@ -240,8 +240,24 @@ before the real track (`.DS_Store`, `README.txt`, `.ogg`, `.opus`), case
 insensitive extensions, directories named like tracks, and the three silent
 outcomes: empty folder, nothing playable, no folder at all.
 
-Not verified: that the webview actually plays the file it is handed. That needs
-a session run by hand.
+**Verified 2026-09-10, after it did not work.** The pipeline was never the
+problem: the asset protocol served the file and WKWebView decoded it, arrow in
+the filename and all, percent encoded correctly as `%E2%86%92`. `play()` was the
+problem. WKWebView only starts audio from a user gesture, and `startAudio` ran
+after several awaits, the database write and the IPC round trip that fetched the
+track path. By then the keypress no longer counted as the cause, so playback was
+refused, the rejection was caught into `console.info`, and the webview console
+goes nowhere in a bundled build. Silence with no explanation: the exact failure
+the extension filter was meant to prevent, arriving through a different door.
+
+Two changes. The track is loaded at startup rather than at session start, and
+`play()` is called synchronously in the Enter handler before any await, while the
+keypress is still the thing causing it.
+
+The diagnostics stay in permanently. `report()` puts messages on the Rust side's
+stderr, and the media element reports `network`, `decode` and
+`source not supported` explicitly, so an unplayable file can never again be
+indistinguishable from having no music configured at all.
 
 ---
 

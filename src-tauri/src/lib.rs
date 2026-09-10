@@ -248,6 +248,14 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+/// The webview's own console goes nowhere in a bundled build, which made every
+/// audio failure invisible. This puts them on stderr, where running the binary
+/// directly will show them.
+#[tauri::command]
+fn report(message: String) {
+    eprintln!("[fokus] {message}");
+}
+
 #[tauri::command]
 fn mark(stage: String, state: State<'_, FokusState>) {
     let Ok(slot) = state.t0.lock() else { return };
@@ -317,6 +325,7 @@ pub fn run() {
         )
         .manage(FokusState::default())
         .invoke_handler(tauri::generate_handler![
+            report,
             mark,
             restore_focus,
             quit_app,
