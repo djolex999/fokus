@@ -1,0 +1,17 @@
+{
+  "identifier": "default",
+  "description": "Capabilities for the widget and main windows.",
+  "windows": ["widget", "main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-set-focus",
+    "core:window:allow-start-dragging",
+    "core:window:allow-outer-position",
+    "core:window:allow-set-size",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close"
+  ]
+}
