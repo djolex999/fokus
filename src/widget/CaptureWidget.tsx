@@ -43,6 +43,7 @@ const ABANDON_EVENT = 'session:abandon'
 const QUIT_EVENT = 'app:quit'
 const MUSIC_EVENT = 'audio:enabled'
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
+const SESSIONS_CLEARED_EVENT = 'sessions:cleared'
 const CONFIRMATION_MS = 1000
 /** Re-render only. The remaining time is computed from the wall clock, so a
  *  missed or delayed tick costs nothing but a stale frame. */
@@ -298,6 +299,14 @@ export function CaptureWidget(): JSX.Element {
         } else {
           stopAudio()
         }
+      }),
+      listen(SESSIONS_CLEARED_EVENT, () => {
+        // The row this session lives in has been deleted. Stop, rather than
+        // count down something that is not there any more.
+        if (sessionOf(stateRef.current) === null) return
+        report('session cleared from under the widget, stopping')
+        dispatch({ type: 'sessionAbandoned' })
+        stopAudio()
       }),
       listen(ABANDON_EVENT, () => {
         const session = sessionOf(stateRef.current)

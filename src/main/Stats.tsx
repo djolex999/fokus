@@ -88,6 +88,10 @@ function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.E
       await onCleared()
       // The review list is reading the same captures.
       void emit('captures:changed')
+      // And the widget may be counting down a session that no longer exists.
+      // Left alone it would keep running, then fail its next capture on a
+      // foreign key pointing at a deleted row.
+      void emit('sessions:cleared')
     } catch (e: unknown) {
       setError(failure('nije obrisano', e))
     }
