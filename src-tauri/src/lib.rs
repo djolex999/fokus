@@ -334,10 +334,14 @@ pub fn run() {
             set_widget_height
         ])
         .setup(|app| {
-            // No dock icon and no app switcher entry: the widget is furniture,
-            // not an application the user is meant to switch into.
+            // A normal application, on purpose. The widget window carries
+            // skipTaskbar, which on Windows hides that window while the process
+            // stays an ordinary app; Accessory was an over-translation of that
+            // to macOS, and it removed the running indicator with no way to get
+            // it back. The cost is an app switcher slot for something driven by
+            // a global shortcut and a tray.
             #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            app.set_activation_policy(tauri::ActivationPolicy::Regular);
 
             match app.path().app_data_dir() {
                 Ok(dir) => eprintln!("[fokus] db: {}", dir.join("fokus.db").display()),
@@ -380,8 +384,15 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("fokus failed to start");
+        .build(tauri::generate_context!())
+        .expect("fokus failed to start")
+        .run(|_app, event| {
+            // Clicking the dock icon must not open the main window. Constraint 3
+            // says it opens only when the user opens it, and a dock click is a
+            // request to see the app, not a request to see that window. The
+            // widget is always on screen already, so there is nothing to do.
+            if let tauri::RunEvent::Reopen { .. } = event {}
+        });
 }
 
 #[cfg(test)]

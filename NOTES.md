@@ -16,10 +16,9 @@ a `todo!()` in `src-tauri/src/focus.rs` with the intended approach written out.
   back to another application. These are Rust side only and macOS gated.
 - **No `tauri-plugin-window-state`.** The widget position is two integers, kept
   in `widget-position.json` in the app config dir by `src-tauri/src/window_pos.rs`.
-- **Activation policy is `Accessory`.** No dock icon and no app switcher entry,
-  which is the macOS reading of "no taskbar entry". Consequence for now: there
-  is no Cmd+Q and no menu bar, so during Session 1 the app is quit with Ctrl+C
-  in the dev terminal. The tray arrives in Session 2.
+- **Activation policy was `Accessory`.** No dock icon and no app switcher entry,
+  taken as the macOS reading of "no taskbar entry". **Reversed on 2026-09-10, see
+  below.**
 - **Cooperative activation.** macOS 14 removed unilateral activation, so
   `activateWithOptions` alone is ignored. The working sequence is
   `NSApp.yieldActivationToApplication(target)` and then `target.activateWithOptions`.
@@ -434,3 +433,29 @@ playing rather than whether it was asked for.
 the real need was a persisted preference, and the honest response then is to
 amend the forbidden features line rather than keep clicking. If it goes untouched
 for weeks, per session was correct.
+
+
+---
+
+## Activation policy: reversed
+
+`Accessory` was an over-translation. `skipTaskbar` on Windows hides *that window*
+while the process remains an ordinary application; it was read here as hiding the
+whole application from macOS. The consequence only showed up in use: an accessory
+app has no dock presence at all, so macOS never draws the running indicator under
+it, and a pinned dock icon is a launcher that can never say whether the thing is
+running. Raised twice before it was believed, and two replies were spent
+explaining why the missing indicator was correct rather than asking whether the
+policy was.
+
+Now `Regular`, verified through `NSWorkspace` rather than from the source:
+`rs.growthq.fokus -> regular`.
+
+Guarded on the way: macOS can ask an app to reopen its windows when its dock icon
+is clicked, which would breach constraint 3, the main window never opening by
+itself. `RunEvent::Reopen` is handled and deliberately does nothing.
+
+Two consequences accepted: Cmd+Q now quits, bypassing the clean session close the
+tray does, which is survivable only because session resume landed first; and the
+app takes an app switcher slot despite being driven by a global shortcut and a
+tray.
