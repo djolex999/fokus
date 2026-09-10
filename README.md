@@ -53,7 +53,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ## Known limits
 
-- **Windows is not implemented.** The focus-return is a `todo!()` and will panic on first capture. The capture loop *is* the product, so there is no Windows build until that is written. The intended approach is documented in `src-tauri/src/focus.rs`
+- **Windows is written but unverified.** The focus-return is implemented and compiles for MSVC; it has never been run. No Windows build is published until it has been. See `WINDOWS.md`
 - **Unsigned builds** show a Gatekeeper warning, as above
 - **A resumed session starts silent.** The webview only begins audio from a user gesture, and launching the app is not one it can see
 
