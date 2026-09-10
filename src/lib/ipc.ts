@@ -14,6 +14,18 @@ export async function restoreFocus(): Promise<void> {
   await invoke('restore_focus')
 }
 
+/** Path of the first playable file in ~/fokus/audio, or null. Null is a normal
+ *  outcome: no folder, an empty one, or nothing playable in it. */
+export async function audioTrack(): Promise<string | null> {
+  return invoke<string | null>('audio_track')
+}
+
+/** Grows or shrinks the widget without letting it jump: the Rust side puts the
+ *  top left corner back after the resize. */
+export async function setWidgetHeight(height: number): Promise<void> {
+  await invoke('set_widget_height', { height })
+}
+
 /** Used only by the tray quit path, after any in flight session is closed out. */
 export async function quitApp(): Promise<void> {
   await invoke('quit_app')

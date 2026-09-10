@@ -5,6 +5,7 @@
   --muted: #7c7c86;
   --dim: #55555e;
   --error: #c08a63;
+  --accent: #c9a36a;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --radius: 11px;
 }
@@ -36,6 +37,7 @@ body {
 }
 
 .widget {
+  position: relative;
   height: 100%;
   padding: 13px 15px;
   display: flex;
@@ -136,4 +138,71 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The ♪ is the entire audio interface. No controls, no track name, no volume:
+   it answers "is something playing" and nothing else. */
+.playing {
+  position: absolute;
+  top: 11px;
+  right: 13px;
+  color: var(--fg);
+  opacity: 0.5;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Sits on the panel's bottom edge and inherits its corner radius. */
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--muted);
+}
+
+/* The last minute. The bar thickens and the timer warms. Nothing moves, nothing
+   sounds, nothing pops. If you are looking at the widget you will notice; if you
+   are working you will not. */
+.progress.last-minute {
+  height: 5px;
+}
+
+.progress.last-minute .progress-fill {
+  background: var(--accent);
+}
+
+.timer.last-minute {
+  color: var(--accent);
+}
+
+/* The resume panel. Shown only after five minutes away, cleared by the first
+   keystroke. */
+.recent {
+  list-style: none;
+  margin-top: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.recent li {
+  color: var(--dim);
+  font-size: 11.5px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent li::before {
+  content: '· ';
 }

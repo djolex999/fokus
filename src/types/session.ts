@@ -21,6 +21,9 @@ export type RunningSession = {
   plannedMin: PlannedMinutes
   /** ISO 8601 UTC. The countdown is derived from this against the wall clock. */
   startedAt: string
+  /** ISO 8601 UTC. Drives the resume panel, so it is mirrored in state rather
+   *  than read back from the database on every shortcut press. */
+  lastActiveAt: string
 }
 
 export type WidgetState =
@@ -29,11 +32,17 @@ export type WidgetState =
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
   | { kind: 'confirmed'; session: RunningSession; returnNumber: number }
+  /** Back after five minutes or more away: the task, and the last three things
+   *  captured, so the thread can be picked up without opening anything. */
+  | { kind: 'resumed'; session: RunningSession; recent: string[] }
   /** The countdown reached zero. Holds at 0:00 until the next shortcut press. */
   | { kind: 'finished'; task: string }
 
 export type WidgetAction =
   | { type: 'shortcut' }
+  | { type: 'resume'; recent: string[] }
+  | { type: 'warmStart'; task: string; plannedMin: PlannedMinutes }
+  | { type: 'touched'; at: string }
   | { type: 'edit'; draft: string }
   | { type: 'toggleDuration' }
   | { type: 'sessionStarted'; session: RunningSession }
@@ -49,6 +58,7 @@ export function sessionOf(state: WidgetState): RunningSession | null {
     case 'running':
     case 'capturing':
     case 'confirmed':
+    case 'resumed':
       return state.session
     case 'idle':
     case 'starting':
@@ -68,6 +78,8 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
           return { kind: 'capturing', session: state.session, draft: '' }
         case 'confirmed':
           return { kind: 'capturing', session: state.session, draft: '' }
+        case 'resumed':
+          return state
         // Firing again mid typing keeps the draft: the shortcut can be pressed
         // twice before the window is up.
         case 'starting':
@@ -78,11 +90,42 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
     case 'edit':
       if (state.kind === 'starting') return { ...state, draft: action.draft }
       if (state.kind === 'capturing') return { ...state, draft: action.draft }
+      // The resume panel clears on the first keystroke, and that keystroke is
+      // kept rather than swallowed.
+      if (state.kind === 'resumed') {
+        return { kind: 'capturing', session: state.session, draft: action.draft }
+      }
       return state
     case 'toggleDuration':
       return state.kind === 'starting'
         ? { ...state, plannedMin: state.plannedMin === 25 ? 50 : 25 }
         : state
+    case 'resume':
+      return state.kind === 'running'
+        ? { kind: 'resumed', session: state.session, recent: action.recent }
+        : state
+    case 'warmStart':
+      // Only ever seen on a cold start, and never allowed to interrupt anything.
+      return state.kind === 'idle'
+        ? { kind: 'starting', draft: action.task, plannedMin: action.plannedMin }
+        : state
+    case 'touched': {
+      const session = sessionOf(state)
+      if (session === null) return state
+      const touched = { ...session, lastActiveAt: action.at }
+      switch (state.kind) {
+        case 'running':
+          return { kind: 'running', session: touched }
+        case 'capturing':
+          return { kind: 'capturing', session: touched, draft: state.draft }
+        case 'confirmed':
+          return { kind: 'confirmed', session: touched, returnNumber: state.returnNumber }
+        case 'resumed':
+          return { kind: 'resumed', session: touched, recent: state.recent }
+        default:
+          return state
+      }
+    }
     case 'sessionStarted':
       return { kind: 'running', session: action.session }
     case 'captureConfirmed':
@@ -110,6 +153,15 @@ export function remainingSeconds(session: RunningSession, now: number): number {
   const elapsed = now - Date.parse(session.startedAt)
   const left = session.plannedMin * 60_000 - elapsed
   return left <= 0 ? 0 : Math.ceil(left / 1000)
+}
+
+/** 0 at the start, 1 at the planned end. Clamped, so a session left running
+ *  past its time does not overflow the bar. */
+export function elapsedFraction(session: RunningSession, now: number): number {
+  const planned = session.plannedMin * 60_000
+  const done = (now - Date.parse(session.startedAt)) / planned
+  if (done <= 0) return 0
+  return done >= 1 ? 1 : done
 }
 
 export function formatCountdown(totalSeconds: number): string {

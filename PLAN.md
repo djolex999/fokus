@@ -67,7 +67,7 @@ Audio, resume panel, return counter, ASRS, statistics.
 - [ ] Abandon at 11 minutes writes `outcome = 'abandoned'`, no failure language anywhere in the UI.
 - [ ] Machine sleeps mid-session; countdown is correct on wake.
 - [ ] Review list empties to zero and stays empty across a restart.
-- [ ] Used for one real working day before moving on. This is a gate, not a formality.
+- [ ] ~~Used for one real working day before moving on.~~ **Passed without being met, 2026-09-10.** Session 3 was started after roughly twenty test captures rather than a day of real use. Recorded because the gate existed to catch exactly this, and skipping it silently would make the record useless. The gate still stands for Gate 1 in the concept note.
 
 ---
 

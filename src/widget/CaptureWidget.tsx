@@ -1,24 +1,36 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent, MutableRefObject } from 'react'
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { emit, listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
+  elapsedFraction,
   formatCountdown,
   remainingSeconds,
   sessionOf,
   widgetReducer,
 } from '../types/session'
-import type { RunningSession, WidgetState } from '../types/session'
+import type { PlannedMinutes, RunningSession, WidgetState } from '../types/session'
 import {
   countCaptures,
   endSession,
   insertCapture,
+  lastAbandonedSession,
   openDatabase,
+  recentCaptureTexts,
   reconcileOpenSessions,
   startSession,
   touchSession,
 } from '../lib/db'
-import { describeError, failure, mark, quitApp, restoreFocus } from '../lib/ipc'
+import {
+  audioTrack,
+  describeError,
+  failure,
+  mark,
+  quitApp,
+  restoreFocus,
+  setWidgetHeight,
+} from '../lib/ipc'
 
 const SHORTCUT_EVENT = 'capture:open'
 const ABANDON_EVENT = 'session:abandon'
@@ -28,6 +40,15 @@ const CONFIRMATION_MS = 1000
 /** Re-render only. The remaining time is computed from the wall clock, so a
  *  missed or delayed tick costs nothing but a stale frame. */
 const TICK_MS = 1000
+/** Away this long and the next interaction gets the resume panel instead of a
+ *  bare input. */
+const RESUME_AFTER_MS = 5 * 60 * 1000
+const RESUME_RECENT = 3
+const WIDGET_HEIGHT = 80
+const WIDGET_HEIGHT_RESUMED = 150
+const LAST_MINUTE_S = 60
+const FADE_MS = 1500
+const FADE_STEP_MS = 50
 
 const initialState: WidgetState = { kind: 'idle' }
 
@@ -35,11 +56,76 @@ export function CaptureWidget(): JSX.Element {
   const [state, dispatch] = useReducer(widgetReducer, initialState)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState<number>(() => Date.now())
+  /** Bumped on every shortcut press so the focus effect re-runs even when the
+   *  state it lands in is the one it was already in. */
+  const [focusTick, setFocusTick] = useState(0)
+  const [playing, setPlaying] = useState(false)
+
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const fadeRef = useRef<number | null>(null)
 
   // Mirrors state for callbacks that must not be rebuilt on every keystroke.
   const stateRef = useRef<WidgetState>(state)
   stateRef.current = state
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), TICK_MS)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  // --- audio -------------------------------------------------------------
+  // Absence is silence, never an error: no folder, an empty folder, or nothing
+  // playable in it all leave the session running exactly as it otherwise would.
+
+  const startAudio = useCallback(async (): Promise<void> => {
+    const element = audioRef.current
+    if (element === null) return
+    try {
+      const path = await audioTrack()
+      if (path === null) return
+      if (fadeRef.current !== null) {
+        window.clearInterval(fadeRef.current)
+        fadeRef.current = null
+      }
+      element.src = convertFileSrc(path)
+      element.loop = true
+      element.volume = 1
+      await element.play()
+      setPlaying(true)
+    } catch (e: unknown) {
+      console.info('no audio this session:', describeError(e))
+    }
+  }, [])
+
+  const stopAudio = useCallback((): void => {
+    const element = audioRef.current
+    if (element === null || element.paused) return
+    if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+
+    const step = FADE_STEP_MS / FADE_MS
+    fadeRef.current = window.setInterval(() => {
+      const next = element.volume - step
+      if (next > 0) {
+        element.volume = next
+        return
+      }
+      element.pause()
+      element.volume = 1
+      setPlaying(false)
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+      fadeRef.current = null
+    }, FADE_STEP_MS)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+    },
+    [],
+  )
+
+  // --- startup -----------------------------------------------------------
 
   useEffect(() => {
     const prepare = async (): Promise<void> => {
@@ -48,14 +134,18 @@ export function CaptureWidget(): JSX.Element {
       if (closed > 0) {
         console.info(`closed ${closed} session(s) left open by a previous run`)
       }
+      // Warm start. Prefilled but not focused: grabbing the keyboard at launch
+      // would interrupt whatever the machine was already doing, which is the
+      // one thing this app must never do.
+      const previous = await lastAbandonedSession()
+      if (previous !== null) {
+        dispatch({ type: 'warmStart', task: previous.task, plannedMin: previous.plannedMin })
+      }
     }
     prepare().catch((e: unknown) => setError(failure('baza nije otvorena', e)))
   }, [])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), TICK_MS)
-    return () => window.clearInterval(timer)
-  }, [])
+  // --- session lifecycle -------------------------------------------------
 
   const returnFocus = useCallback(async (): Promise<void> => {
     try {
@@ -65,43 +155,71 @@ export function CaptureWidget(): JSX.Element {
     }
   }, [])
 
+  const touch = useCallback(async (sessionId: number): Promise<void> => {
+    try {
+      dispatch({ type: 'touched', at: await touchSession(sessionId) })
+    } catch (e: unknown) {
+      console.error('could not record activity:', describeError(e))
+    }
+  }, [])
+
   const finishSession = useCallback(
     async (session: RunningSession, outcome: 'completed' | 'abandoned'): Promise<void> => {
-      dispatch(outcome === 'completed' ? { type: 'sessionCompleted' } : { type: 'sessionAbandoned' })
+      dispatch(
+        outcome === 'completed' ? { type: 'sessionCompleted' } : { type: 'sessionAbandoned' },
+      )
+      stopAudio()
       try {
         await endSession(session.id, outcome)
       } catch (e: unknown) {
         setError(failure('sesija nije zatvorena', e))
       }
     },
-    [],
+    [stopAudio],
   )
 
   // The countdown running out ends the session. Derived from the wall clock, so
   // this fires correctly on the first tick after the machine wakes from sleep.
   useEffect(() => {
-    if (state.kind !== 'running' && state.kind !== 'capturing' && state.kind !== 'confirmed') {
-      return
-    }
-    if (remainingSeconds(state.session, now) > 0) return
-    void finishSession(state.session, 'completed')
+    const session = sessionOf(state)
+    if (session === null || state.kind === 'finished') return
+    if (remainingSeconds(session, now) > 0) return
+    void finishSession(session, 'completed')
   }, [state, now, finishSession])
 
+  // --- events ------------------------------------------------------------
+
   useEffect(() => {
-    const subscriptions: Array<Promise<UnlistenFn>> = [
-      listen(SHORTCUT_EVENT, () => {
-        setError(null)
+    const onShortcut = (): void => {
+      setError(null)
+      setFocusTick((tick) => tick + 1)
+
+      const current = stateRef.current
+      const session = sessionOf(current)
+      if (session === null) {
         dispatch({ type: 'shortcut' })
-        const session = sessionOf(stateRef.current)
-        if (session !== null) {
-          void touchSession(session.id)
-        }
-      }),
+        return
+      }
+
+      const away = Date.now() - Date.parse(session.lastActiveAt)
+      if (current.kind === 'running' && away > RESUME_AFTER_MS) {
+        recentCaptureTexts(session.id, RESUME_RECENT)
+          .then((recent) => dispatch({ type: 'resume', recent }))
+          // Losing the panel is survivable; losing the capture is not.
+          .catch(() => dispatch({ type: 'shortcut' }))
+          .finally(() => void touch(session.id))
+        return
+      }
+
+      dispatch({ type: 'shortcut' })
+      void touch(session.id)
+    }
+
+    const subscriptions: Array<Promise<UnlistenFn>> = [
+      listen(SHORTCUT_EVENT, onShortcut),
       listen(ABANDON_EVENT, () => {
         const session = sessionOf(stateRef.current)
-        if (session !== null) {
-          void finishSession(session, 'abandoned')
-        }
+        if (session !== null) void finishSession(session, 'abandoned')
       }),
       listen(QUIT_EVENT, () => {
         const session = sessionOf(stateRef.current)
@@ -116,18 +234,31 @@ export function CaptureWidget(): JSX.Element {
         pending.then((unlisten) => unlisten()).catch(() => undefined)
       }
     }
-  }, [finishSession])
+  }, [finishSession, touch])
+
+  // --- window and focus --------------------------------------------------
+
+  // Grows downward for the resume panel. The Rust side puts the top left corner
+  // back afterwards so the widget does not slide out from under the cursor.
+  useEffect(() => {
+    const height = state.kind === 'resumed' ? WIDGET_HEIGHT_RESUMED : WIDGET_HEIGHT
+    setWidgetHeight(height).catch((e: unknown) =>
+      console.error('could not resize widget:', describeError(e)),
+    )
+  }, [state.kind])
 
   // Focus follows the state machine rather than the event handler, so every
   // path into a text state lands the caret in the same place.
   useEffect(() => {
-    if (state.kind !== 'capturing' && state.kind !== 'starting') return
+    if (state.kind !== 'capturing' && state.kind !== 'starting' && state.kind !== 'resumed') {
+      return
+    }
     const input = inputRef.current
     if (input === null) return
     input.focus()
     input.select()
     void mark('input focused')
-  }, [state.kind])
+  }, [state.kind, focusTick])
 
   useEffect(() => {
     if (state.kind !== 'confirmed') return
@@ -135,8 +266,10 @@ export function CaptureWidget(): JSX.Element {
     return () => window.clearTimeout(timer)
   }, [state.kind])
 
+  // --- actions -----------------------------------------------------------
+
   const beginSession = useCallback(
-    async (draft: string, plannedMin: 25 | 50): Promise<void> => {
+    async (draft: string, plannedMin: PlannedMinutes): Promise<void> => {
       const task = draft.trim()
       if (task === '') {
         dispatch({ type: 'dismiss' })
@@ -151,8 +284,9 @@ export function CaptureWidget(): JSX.Element {
       }
       void mark('session started')
       await returnFocus()
+      void startAudio()
     },
-    [returnFocus],
+    [returnFocus, startAudio],
   )
 
   const commitCapture = useCallback(
@@ -184,10 +318,10 @@ export function CaptureWidget(): JSX.Element {
       void mark('confirmation shown')
 
       await returnFocus()
-      void touchSession(session.id)
+      void touch(session.id)
       void emit(CAPTURES_CHANGED_EVENT)
     },
-    [returnFocus],
+    [returnFocus, touch],
   )
 
   const onKeyDown = useCallback(
@@ -207,6 +341,11 @@ export function CaptureWidget(): JSX.Element {
         if (current.kind === 'capturing') {
           void mark('enter pressed')
           void commitCapture(current.session, current.draft)
+          return
+        }
+        if (current.kind === 'resumed') {
+          dispatch({ type: 'captureDismissed' })
+          void returnFocus()
         }
         return
       }
@@ -214,7 +353,7 @@ export function CaptureWidget(): JSX.Element {
         event.preventDefault()
         if (current.kind === 'starting') {
           dispatch({ type: 'dismiss' })
-        } else if (current.kind === 'capturing') {
+        } else if (current.kind === 'capturing' || current.kind === 'resumed') {
           dispatch({ type: 'captureDismissed' })
         }
         void returnFocus()
@@ -223,15 +362,27 @@ export function CaptureWidget(): JSX.Element {
     [beginSession, commitCapture, returnFocus],
   )
 
-  const onChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+  const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
     setError(null)
     dispatch({ type: 'edit', draft: event.target.value })
   }, [])
 
+  const session = sessionOf(state)
+  const left = session === null ? null : remainingSeconds(session, now)
+  const lastMinute = left !== null && left <= LAST_MINUTE_S
+
   return (
     <div className="widget" data-tauri-drag-region>
-      {renderBody(state, now, inputRef, onChange, onKeyDown)}
+      {renderBody(state, now, lastMinute, inputRef, onChange, onKeyDown)}
       {error !== null && <div className="error">{error}</div>}
+      {playing && <div className="playing">♪</div>}
+      {session !== null && state.kind !== 'finished' && (
+        <div className={lastMinute ? 'progress last-minute' : 'progress'}>
+          <div className="progress-fill" style={{ width: `${elapsedFraction(session, now) * 100}%` }} />
+        </div>
+      )}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio ref={audioRef} preload="none" />
     </div>
   )
 }
@@ -239,8 +390,9 @@ export function CaptureWidget(): JSX.Element {
 function renderBody(
   state: WidgetState,
   now: number,
-  inputRef: React.MutableRefObject<HTMLInputElement | null>,
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void,
+  lastMinute: boolean,
+  inputRef: MutableRefObject<HTMLInputElement | null>,
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void,
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void,
 ): JSX.Element {
   switch (state.kind) {
@@ -274,7 +426,16 @@ function renderBody(
       )
 
     case 'running':
-      return <Countdown session={state.session} now={now} />
+      return (
+        <>
+          <div className={lastMinute ? 'timer last-minute' : 'timer'} data-tauri-drag-region>
+            {formatCountdown(remainingSeconds(state.session, now))}
+          </div>
+          <div className="secondary" data-tauri-drag-region>
+            {state.session.task}
+          </div>
+        </>
+      )
 
     case 'capturing':
       return (
@@ -296,13 +457,42 @@ function renderBody(
         </>
       )
 
+    case 'resumed':
+      return (
+        <>
+          <input
+            ref={inputRef}
+            className="capture-input"
+            type="text"
+            value=""
+            placeholder="zapiši misao"
+            spellCheck={false}
+            autoComplete="off"
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+          <div className="secondary" data-tauri-drag-region>
+            {state.session.task}
+          </div>
+          {state.recent.length > 0 && (
+            <ul className="recent" data-tauri-drag-region>
+              {state.recent.map((text, index) => (
+                <li key={`${index}-${text}`}>{text}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      )
+
     case 'confirmed':
       return (
         <>
           <div className="confirmed" data-tauri-drag-region>
             {state.returnNumber}. povratak
           </div>
-          <Countdown session={state.session} now={now} compact />
+          <div className="secondary" data-tauri-drag-region>
+            {formatCountdown(remainingSeconds(state.session, now))} · {state.session.task}
+          </div>
         </>
       )
 
@@ -318,33 +508,4 @@ function renderBody(
         </>
       )
   }
-}
-
-function Countdown({
-  session,
-  now,
-  compact = false,
-}: {
-  session: RunningSession
-  now: number
-  compact?: boolean
-}): JSX.Element {
-  const left = remainingSeconds(session, now)
-  if (compact) {
-    return (
-      <div className="secondary" data-tauri-drag-region>
-        {formatCountdown(left)} · {session.task}
-      </div>
-    )
-  }
-  return (
-    <>
-      <div className="timer" data-tauri-drag-region>
-        {formatCountdown(left)}
-      </div>
-      <div className="secondary" data-tauri-drag-region>
-        {session.task}
-      </div>
-    </>
-  )
 }

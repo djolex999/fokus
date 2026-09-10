@@ -184,3 +184,46 @@ failed. Each one is now framed in Serbian at the point it is raised, with the
 driver's own text kept after it. The detail stays English on purpose; it is
 diagnostic, and translating or dropping it would lose the only information worth
 having when something breaks.
+
+---
+
+## Session 3: retention
+
+Started after the working day gate was passed rather than met. Recorded in
+`PLAN.md` at the point of the gate.
+
+### Decisions taken during the session
+
+- **The audio scan filters by extension.** The plan says "the first file
+  alphabetically", but taken literally a `.DS_Store` or a readme wins and the
+  session runs silent with nothing to explain why. The scan considers mp3, m4a,
+  wav, flac, aac, ogg and opus, and takes the first of those alphabetically.
+- **Warm start prefills but does not focus.** The plan's acceptance line reads
+  "cold start to running session in one keypress", which implies the widget holds
+  the keyboard at launch. It does not, and deliberately: launch can happen at
+  login, and stealing the keyboard from whatever the machine was already doing is
+  the one thing this app must never do. The task is prefilled and selected, so
+  the sequence is the shortcut and then Enter, and typing still replaces it.
+- **Item 5 assumes a progress bar that did not exist.** "Progress bar height 2px
+  to 5px" was the first mention of one anywhere in the plan, so Session 3 built
+  it as well as the last minute treatment.
+- **Resizing for the resume panel is done in Rust.** macOS anchors a window by
+  its bottom left corner, so setting the height alone pushes the top edge upward
+  and the widget slides out from under the cursor. `set_widget_height` reads the
+  top left first and puts it back, in logical units for the same reason
+  `window_pos` uses them.
+- **The resume panel's first keystroke is kept, not swallowed.** The `edit`
+  action transitions `resumed` straight into `capturing` carrying the character
+  that triggered it.
+- **A focus tick was needed.** Pressing the shortcut while already in `starting`
+  leaves `state.kind` unchanged, so a focus effect keyed on the state alone never
+  re-runs and the caret never lands. A counter bumped on every shortcut press
+  fixes it, which the warm start made reachable for the first time.
+
+### Verification
+
+`elapsedFraction` checked directly: 0 at the start, 0.5 halfway, clamped to 1
+past the end, and 0 if the clock moves backwards.
+
+`~/fokus/audio` does not exist on this machine, which is the silent path. The
+folder-present path is untested.

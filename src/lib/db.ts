@@ -61,7 +61,7 @@ export async function startSession(
   if (result.lastInsertId === undefined) {
     throw new Error('session insert returned no id')
   }
-  return { id: result.lastInsertId, task, plannedMin, startedAt }
+  return { id: result.lastInsertId, task, plannedMin, startedAt, lastActiveAt: startedAt }
 }
 
 export async function endSession(
@@ -76,13 +76,48 @@ export async function endSession(
 }
 
 /** Written on session start, capture open and capture commit. Not per keystroke:
- *  that would be a disk write per character for a field read once a session. */
-export async function touchSession(sessionId: number): Promise<void> {
+ *  that would be a disk write per character for a field read once a session.
+ *  Returns the timestamp written so state can mirror it without a read back. */
+export async function touchSession(sessionId: number): Promise<string> {
   const conn = await db()
-  await conn.execute(`UPDATE sessions SET last_active_at = $1 WHERE id = $2`, [
-    nowIso(),
-    sessionId,
-  ])
+  const at = nowIso()
+  await conn.execute(`UPDATE sessions SET last_active_at = $1 WHERE id = $2`, [at, sessionId])
+  return at
+}
+
+/** The task and duration of the session most recently abandoned, for the warm
+ *  start. Null when there has never been one. */
+export async function lastAbandonedSession(): Promise<{
+  task: string
+  plannedMin: PlannedMinutes
+} | null> {
+  const conn = await db()
+  const rows = await conn.select<Array<{ task: string; planned_min: number }>>(
+    `SELECT task, planned_min
+       FROM sessions
+      WHERE outcome = 'abandoned'
+      ORDER BY ended_at DESC
+      LIMIT 1`,
+  )
+  const first = rows[0]
+  if (first === undefined) return null
+  // Anything other than the two known durations is treated as the short one
+  // rather than trusted into a type it does not belong to.
+  return { task: first.task, plannedMin: first.planned_min === 50 ? 50 : 25 }
+}
+
+/** The most recent capture texts for a session, newest first. Feeds the resume
+ *  panel, which shows three. */
+export async function recentCaptureTexts(sessionId: number, limit: number): Promise<string[]> {
+  const conn = await db()
+  const rows = await conn.select<Array<{ text: string }>>(
+    `SELECT text FROM captures
+      WHERE session_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2`,
+    [sessionId, limit],
+  )
+  return rows.map((row) => row.text)
 }
 
 export async function insertCapture(sessionId: number, text: string): Promise<void> {

@@ -7,7 +7,7 @@ use std::time::Instant;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const WIDGET_LABEL: &str = "widget";
@@ -19,6 +19,11 @@ const QUIT_EVENT: &str = "app:quit";
 /// exits anyway. A failed write must not strand the user in an app that will
 /// not quit; the startup reconcile will catch whatever was missed.
 const QUIT_GRACE_MS: u64 = 1500;
+const WIDGET_WIDTH: f64 = 280.0;
+/// Extensions the audio folder scan will consider. The plan says "the first
+/// file alphabetically", but taking that literally means a stray .DS_Store or a
+/// readme wins and the session runs silently with no way to tell why.
+const AUDIO_EXTENSIONS: [&str; 7] = ["mp3", "m4a", "wav", "flac", "aac", "ogg", "opus"];
 
 #[derive(Default)]
 struct FokusState {
@@ -129,6 +134,62 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// First audio file in ~/fokus/audio, alphabetically. A missing folder, an empty
+/// one, or one holding nothing playable all return None: silence is a valid
+/// outcome here, never an error.
+#[tauri::command]
+fn audio_track(app: AppHandle) -> Option<String> {
+    let dir = app.path().home_dir().ok()?.join("fokus").join("audio");
+    let entries = std::fs::read_dir(&dir).ok()?;
+
+    let mut playable: Vec<std::path::PathBuf> = entries
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| {
+            if !path.is_file() {
+                return false;
+            }
+            let Some(extension) = path.extension().and_then(|e| e.to_str()) else {
+                return false;
+            };
+            AUDIO_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str())
+        })
+        .collect();
+
+    playable.sort();
+    playable
+        .into_iter()
+        .next()
+        .map(|path| path.to_string_lossy().into_owned())
+}
+
+/// Grows the widget downward for the resume panel.
+///
+/// macOS anchors a window by its bottom left corner, so changing the height
+/// alone pushes the top edge upward and the widget jumps out from under the
+/// cursor. The top left is read first and put back afterwards. Both reads and
+/// writes go through logical units, for the same reason `window_pos` does.
+#[tauri::command]
+fn set_widget_height(app: AppHandle, height: f64) -> Result<(), String> {
+    let window = app
+        .get_webview_window(WIDGET_LABEL)
+        .ok_or_else(|| "widget window is gone".to_string())?;
+
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let position = window.outer_position().map_err(|e| e.to_string())?;
+    let top_left = LogicalPosition::new(
+        f64::from(position.x) / scale,
+        f64::from(position.y) / scale,
+    );
+
+    window
+        .set_size(LogicalSize::new(WIDGET_WIDTH, height))
+        .map_err(|e| format!("could not resize widget: {e}"))?;
+    window
+        .set_position(top_left)
+        .map_err(|e| format!("could not re-anchor widget: {e}"))
+}
+
 #[tauri::command]
 fn quit_app(app: AppHandle) {
     app.exit(0);
@@ -202,7 +263,13 @@ pub fn run() {
                 .build(),
         )
         .manage(FokusState::default())
-        .invoke_handler(tauri::generate_handler![mark, restore_focus, quit_app])
+        .invoke_handler(tauri::generate_handler![
+            mark,
+            restore_focus,
+            quit_app,
+            audio_track,
+            set_widget_height
+        ])
         .setup(|app| {
             // No dock icon and no app switcher entry: the widget is furniture,
             // not an application the user is meant to switch into.
