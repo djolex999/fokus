@@ -62,8 +62,9 @@ type Strings = {
   outOfSix: string
   partAFour: string
   partAUnderFour: string
-  framingNotDiagnosis: string
-  framingTakeIt: string
+  /** Shown under the score. Keeps two facts apart on purpose: the screener is
+   *  published and validated, the software around it is not. */
+  resultFraming: string
   retake: string
   earlier: string
   // statistics
@@ -131,9 +132,8 @@ const sr: Strings = {
   outOfSix: 'od 6',
   partAFour: 'Deo A, četiri ili više od šest.',
   partAUnderFour: 'Deo A, manje od četiri od šest.',
-  framingNotDiagnosis:
-    'Ovo je upitnik za probir, ne dijagnoza. Ne može da postavi dijagnozu i ne isključuje je.',
-  framingTakeIt: 'Odnesi rezultat psihijatru.',
+  resultFraming:
+    'Ovo je WHO ASRS v1.1 upitnik za samoprocenu, prenet kako je objavljen. Nije dijagnoza i ne može je postaviti. Visok skor znači samo da pitanja vredi izneti lekaru. Softver oko upitnika nije klinički validiran.',
   retake: 'popuni ponovo',
   earlier: 'ranije',
   statCompletion: 'završeno po dužini',
@@ -195,9 +195,8 @@ const en: Strings = {
   outOfSix: 'of 6',
   partAFour: 'Part A, four or more of six.',
   partAUnderFour: 'Part A, fewer than four of six.',
-  framingNotDiagnosis:
-    'This is a screener, not a diagnosis. It cannot make one and it cannot rule one out.',
-  framingTakeIt: 'Take the result to a psychiatrist.',
+  resultFraming:
+    'This is the WHO ASRS v1.1 screener, reproduced as published. It is not a diagnosis and cannot produce one. A high score means the questions are worth raising with a doctor, nothing more. This software has not been clinically validated.',
   retake: 'take it again',
   earlier: 'earlier',
   statCompletion: 'completion by length',

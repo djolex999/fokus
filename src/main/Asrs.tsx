@@ -182,10 +182,13 @@ function Result({
         has no standing to give, and a reassurance it has no standing to give
         either.
       */}
+      {/*
+        Body size, not fine print. This is part of reading the score, and a
+        disclaimer set smaller than the text around it gets skipped by exactly
+        the person who most needs to read it.
+      */}
       <div className="framing">
-        <p>{t.framingNotDiagnosis}</p>
-        <p>{t.framingTakeIt}</p>
-        <p className="disclaimer">{t.disclaimer}</p>
+        <p>{t.resultFraming}</p>
       </div>
 
       <div className="actions">
