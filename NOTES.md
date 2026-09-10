@@ -225,8 +225,23 @@ Started after the working day gate was passed rather than met. Recorded in
 `elapsedFraction` checked directly: 0 at the start, 0.5 halfway, clamped to 1
 past the end, and 0 if the clock moves backwards.
 
-`~/fokus/audio` does not exist on this machine, which is the silent path. The
-folder-present path is untested.
+`~/fokus/audio` did not exist at the time, which is the silent path.
+
+**Followed up 2026-09-10.** The folder-present path was exercised and the scan
+turned out to be wrong: `AUDIO_EXTENSIONS` accepted `ogg` and `opus`, neither of
+which WKWebView can decode. Picking one would have handed the audio element a
+file it silently refuses, which is exactly the unexplained silence the extension
+filter was added to prevent. The list is now what the webview actually plays:
+mp3, m4a, aac, wav, aiff, flac.
+
+The scan is now `first_playable`, split out from the command so it can be tested
+without an app handle. Five tests cover alphabetical order, decoys that sort
+before the real track (`.DS_Store`, `README.txt`, `.ogg`, `.opus`), case
+insensitive extensions, directories named like tracks, and the three silent
+outcomes: empty folder, nothing playable, no folder at all.
+
+Not verified: that the webview actually plays the file it is handed. That needs
+a session run by hand.
 
 ---
 

@@ -23,7 +23,12 @@ const WIDGET_WIDTH: f64 = 280.0;
 /// Extensions the audio folder scan will consider. The plan says "the first
 /// file alphabetically", but taking that literally means a stray .DS_Store or a
 /// readme wins and the session runs silently with no way to tell why.
-const AUDIO_EXTENSIONS: [&str; 7] = ["mp3", "m4a", "wav", "flac", "aac", "ogg", "opus"];
+///
+/// Restricted to what the webview can actually decode. This list previously
+/// included ogg and opus, which WKWebView cannot play: picking one would hand
+/// the audio element a file it silently refuses, producing exactly the
+/// unexplained silence the filter exists to prevent.
+const AUDIO_EXTENSIONS: [&str; 6] = ["mp3", "m4a", "aac", "wav", "aiff", "flac"];
 
 #[derive(Default)]
 struct FokusState {
@@ -143,9 +148,13 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 #[tauri::command]
 fn audio_track(app: AppHandle) -> Option<String> {
     let dir = app.path().home_dir().ok()?.join("fokus").join("audio");
-    let entries = std::fs::read_dir(&dir).ok()?;
+    first_playable(&dir).map(|path| path.to_string_lossy().into_owned())
+}
 
-    let mut playable: Vec<std::path::PathBuf> = entries
+/// Split out from the command so it can be tested without an app handle.
+fn first_playable(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    let mut playable: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
+        .ok()?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
         .filter(|path| {
@@ -160,10 +169,7 @@ fn audio_track(app: AppHandle) -> Option<String> {
         .collect();
 
     playable.sort();
-    playable
-        .into_iter()
-        .next()
-        .map(|path| path.to_string_lossy().into_owned())
+    playable.into_iter().next()
 }
 
 /// Grows the widget downward for the resume panel.
@@ -322,4 +328,62 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("fokus failed to start");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_playable;
+    use std::fs;
+
+    fn dir(name: &str, files: &[&str]) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!("fokus-audio-{name}"));
+        let _ = fs::remove_dir_all(&path);
+        fs::create_dir_all(&path).unwrap();
+        for file in files {
+            fs::write(path.join(file), b"").unwrap();
+        }
+        path
+    }
+
+    fn picked(path: &std::path::Path) -> Option<String> {
+        first_playable(path).map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+    }
+
+    #[test]
+    fn takes_the_first_playable_file_alphabetically() {
+        let d = dir("order", &["c.mp3", "a.wav", "b.m4a"]);
+        assert_eq!(picked(&d).as_deref(), Some("a.wav"));
+    }
+
+    #[test]
+    fn skips_files_that_sort_first_but_cannot_be_played() {
+        // Every decoy here sorts before the real track. Without the filter the
+        // scan would hand the webview a dotfile and the session would run
+        // silent with nothing to explain why.
+        let d = dir("decoys", &[".DS_Store", "README.txt", "aaa.ogg", "aab.opus", "track.mp3"]);
+        assert_eq!(picked(&d).as_deref(), Some("track.mp3"));
+    }
+
+    #[test]
+    fn extension_matching_ignores_case() {
+        let d = dir("case", &["Track.MP3"]);
+        assert_eq!(picked(&d).as_deref(), Some("Track.MP3"));
+    }
+
+    #[test]
+    fn silence_is_a_valid_outcome() {
+        assert_eq!(picked(&dir("empty", &[])), None);
+        assert_eq!(picked(&dir("nothing-playable", &["notes.txt"])), None);
+        assert_eq!(
+            first_playable(&std::env::temp_dir().join("fokus-audio-does-not-exist")),
+            None
+        );
+    }
+
+    #[test]
+    fn directories_are_not_tracks() {
+        let d = dir("subdir", &["track.mp3"]);
+        fs::create_dir_all(d.join("aaa.mp3")).unwrap();
+        assert_eq!(picked(&d).as_deref(), Some("track.mp3"));
+    }
 }
