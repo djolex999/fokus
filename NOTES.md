@@ -3,7 +3,7 @@
 Running notes per session. Measurements, platform quirks, and decisions that
 are not obvious from the code.
 
-## Session 1 — the loop
+## Session 1: the loop
 
 ### Platform
 
@@ -120,7 +120,7 @@ dead space, still reported as on screen by `CGWindowListCopyWindowInfo`.
 
 ---
 
-## Session 2 — sessions
+## Session 2: sessions
 
 ### Decisions taken during the session
 
