@@ -396,12 +396,26 @@ still records zero, which is the bug reproduced for contrast; a late heartbeat
 cannot modify a closed session; and the understatement is bounded by one
 interval.
 
-### Related, not fixed
+### Related, since fixed
 
-A session slept through records `ended_at` at wake time rather than at its
-planned end, because completion writes `now`. That overstates completed
-sessions. It does not touch the abandonment median, which only reads abandoned
-rows, so it is noted rather than chased.
+A session slept through recorded `ended_at` at wake time rather than at its
+planned end, because completion wrote `now`. Fixed on 2026-09-10: a completed
+session is dated from `started_at + planned_min`, because it ended when its time
+ran out, not when a one second tick noticed. In the ordinary case that corrects a
+second of drift; in the case that matters it stops a 25 minute session recording
+as three hours. Abandonment still takes `now`, because an abandoned session
+genuinely did end at the moment it was abandoned.
+
+### A correction to an earlier claim
+
+It was also claimed that a session whose time runs out while the app is closed
+records as abandoned "even though it ran its full duration". That was wrong on
+both halves. It did not run its full duration, the app was shut for part of it,
+so abandoned is the honest outcome. And the proposed fix, inferring completion
+from the heartbeat reaching the planned end, could never fire: if the app is
+alive at the planned end then the completion effect has already run, so an open
+expired session always means the process died first. It would have been a no op
+shipped on the strength of a plausible sounding argument.
 
 ---
 

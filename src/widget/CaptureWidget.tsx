@@ -231,7 +231,7 @@ export function CaptureWidget(): JSX.Element {
       )
       stopAudio()
       try {
-        await endSession(session.id, outcome)
+        await endSession(session, outcome)
       } catch (e: unknown) {
         setError(failure('sesija nije zatvorena', e))
       }
@@ -305,7 +305,7 @@ export function CaptureWidget(): JSX.Element {
       }),
       listen(QUIT_EVENT, () => {
         const session = sessionOf(stateRef.current)
-        const done = session === null ? Promise.resolve() : endSession(session.id, 'abandoned')
+        const done = session === null ? Promise.resolve() : endSession(session, 'abandoned')
         // Quit regardless: a failed write must not strand the user in an app
         // that will not close.
         done.catch(() => undefined).finally(() => void quitApp())

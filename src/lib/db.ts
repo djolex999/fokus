@@ -77,14 +77,30 @@ export async function startSession(
   return { id: result.lastInsertId, task, plannedMin, startedAt, lastInteractionAt: startedAt }
 }
 
+/**
+ * A completed session ended when its time ran out, not when something noticed.
+ *
+ * Completion is detected on a one second tick, so writing `now` was a second
+ * late in the ordinary case and wildly wrong in one that matters: sleep through
+ * a session and the machine wakes hours later, the tick fires, and a 25 minute
+ * session records as three hours. Its length becomes fiction.
+ *
+ * An abandoned session is the opposite: it genuinely ended at the moment it was
+ * abandoned, so that one does take `now`.
+ */
 export async function endSession(
-  sessionId: number,
+  session: RunningSession,
   outcome: 'completed' | 'abandoned',
 ): Promise<void> {
+  const endedAt =
+    outcome === 'completed'
+      ? new Date(Date.parse(session.startedAt) + session.plannedMin * 60_000).toISOString()
+      : nowIso()
+
   const conn = await db()
   await conn.execute(
     `UPDATE sessions SET outcome = $1, ended_at = $2 WHERE id = $3 AND ended_at IS NULL`,
-    [outcome, nowIso(), sessionId],
+    [outcome, endedAt, session.id],
   )
 }
 
