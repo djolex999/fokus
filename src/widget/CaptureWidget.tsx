@@ -65,10 +65,20 @@ const HEARTBEAT_MS = 60_000
 const WIDGET_HEIGHT = 80
 const WIDGET_HEIGHT_RESUMED = 150
 const LAST_MINUTE_S = 60
-const FADE_MS = 1500
+/** Longer coming in than going out. Sound arriving is the thing most likely to
+ *  be noticed, so it gets the gentler ramp; a tail that lingers just delays the
+ *  silence that marks the end of a session. */
+const FADE_IN_MS = 3000
+const FADE_OUT_MS = 2000
 const FADE_STEP_MS = 50
 
 const initialState: WidgetState = { kind: 'idle' }
+
+/** Seconds as m:ss, for the audio log only. */
+function clock(seconds: number): string {
+  const whole = Math.floor(seconds)
+  return `${Math.floor(whole / 60)}:${(whole % 60).toString().padStart(2, '0')}`
+}
 
 export function CaptureWidget(): JSX.Element {
   const [state, dispatch] = useReducer(widgetReducer, initialState)
@@ -132,6 +142,35 @@ export function CaptureWidget(): JSX.Element {
       .catch((e: unknown) => report(`audio: could not resolve a track: ${describeError(e)}`))
   }, [])
 
+  /**
+   * Ramps the volume and calls back when it arrives.
+   *
+   * Both ends of a session get this. Sound appearing at full volume is itself a
+   * small interruption, which is the one thing this app is not allowed to be,
+   * and cutting out abruptly at the end reads as something breaking rather than
+   * something finishing.
+   */
+  const fadeTo = useCallback((target: number, whenDone?: () => void): void => {
+    const element = audioRef.current
+    if (element === null) return
+    if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+
+    const rising = target > element.volume
+    const step = (FADE_STEP_MS / (rising ? FADE_IN_MS : FADE_OUT_MS)) * (rising ? 1 : -1)
+
+    fadeRef.current = window.setInterval(() => {
+      const next = element.volume + step
+      const arrived = rising ? next >= target : next <= target
+      // Clamped: the browser throws on anything outside 0 to 1, and floating
+      // point will overshoot the last step.
+      element.volume = arrived ? target : Math.min(1, Math.max(0, next))
+      if (!arrived) return
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
+      fadeRef.current = null
+      whenDone?.()
+    }, FADE_STEP_MS)
+  }, [])
+
   const startAudio = useCallback((): void => {
     const element = audioRef.current
     if (element === null || element.src === '') return
@@ -139,32 +178,39 @@ export function CaptureWidget(): JSX.Element {
       window.clearInterval(fadeRef.current)
       fadeRef.current = null
     }
-    element.volume = 1
+
+    // Somewhere new each session. A ninety minute track and a twenty five
+    // minute session means the first quarter is the only part ever heard, and
+    // by the fourth session you know it well enough to listen to it, which is
+    // the opposite of what background sound is for.
+    //
+    // Duration is NaN until the metadata has loaded. Starting at zero then is
+    // correct rather than an error: the track plays, it just does not move.
+    const { duration } = element
+    if (Number.isFinite(duration) && duration > 0) {
+      element.currentTime = Math.random() * duration
+      report(`audio: starting at ${clock(element.currentTime)} of ${clock(duration)}`)
+    }
+
+    element.volume = 0
     element
       .play()
-      .then(() => setPlaying(true))
+      .then(() => {
+        setPlaying(true)
+        fadeTo(1)
+      })
       .catch((e: unknown) => report(`audio: play refused: ${describeError(e)}`))
-  }, [])
+  }, [fadeTo])
 
   const stopAudio = useCallback((): void => {
     const element = audioRef.current
     if (element === null || element.paused) return
-    if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
-
-    const step = FADE_STEP_MS / FADE_MS
-    fadeRef.current = window.setInterval(() => {
-      const next = element.volume - step
-      if (next > 0) {
-        element.volume = next
-        return
-      }
+    fadeTo(0, () => {
       element.pause()
       element.volume = 1
       setPlaying(false)
-      if (fadeRef.current !== null) window.clearInterval(fadeRef.current)
-      fadeRef.current = null
-    }, FADE_STEP_MS)
-  }, [])
+    })
+  }, [fadeTo])
 
   useEffect(
     () => () => {
