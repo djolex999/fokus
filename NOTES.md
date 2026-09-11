@@ -588,12 +588,17 @@ square reads as a selection marquee.
 
 ---
 
-## Windows: written, never run
+## Windows: written blind, then run
 
-Implemented on 2026-09-10 on a Mac. It compiles for `x86_64-pc-windows-msvc` and
-has not executed once. That distinction matters more here than anywhere else in
-this project, because the capture loop is the product and it is the part that
-cannot be reasoned into working.
+Implemented on 2026-09-10 on a Mac, where it compiled and had not executed once.
+Run for the first time on 2026-09-11 on a real Windows machine, and the capture
+loop worked: Ctrl+Shift+Space from Notepad, type, Enter, and typing resumes in
+Notepad without touching the mouse. `AttachThreadInput` around
+`SetForegroundWindow` was the part in doubt and it held on the first attempt.
+
+The distinction between compiling and running mattered more here than anywhere
+else in this project, because the capture loop is the product and it is the part
+that cannot be reasoned into working.
 
 ### How it was checked without a Windows machine
 
@@ -637,15 +642,28 @@ registered the chord. Two places naming one shortcut, and the frontend copy woul
 have told Windows users to press a key their keyboard does not have. The label
 now comes from the side that registers it.
 
-### Still to do, and it needs the machine
+### What the first run actually cost, and none of it was the code
 
-- Run it. The foreground lock is the part that will or will not work
-- `transparent`, `decorations: false`, `alwaysOnTop`, `skipTaskbar` and `shadow`
-  all mean something different under WebView2
+Three environment walls before a single line of fokus was reached: pnpm's build
+script gate rejecting `esbuild`, with the setting to allow it having moved twice
+between versions; `link.exe not found`, arriving only after 354 crates had
+downloaded and reading like a compile error; and rustc running out of memory on
+the `windows` crate, fixed with `CARGO_BUILD_JOBS=1`.
+
+Then one real bug, mine: `RunEvent::Reopen` does not exist on Windows, and the
+isolated type-check I had built only contained the `imp` module from `focus.rs`,
+so it could not see `lib.rs`. **A partial check that passes reads exactly like a
+whole check that passed.** CI now compiles for both platforms, which is the
+change that stops that recurring.
+
+### Still open on Windows
+
+- Everything outside the capture loop has had far less use there than on macOS
+- `transparent`, `decorations: false`, `alwaysOnTop` and `shadow` all mean
+  something different under WebView2 and have not been examined
 - `window_pos.rs` does DPI arithmetic written against a mixed DPI *macOS* setup.
   Windows per monitor DPI is its own problem, and this is exactly where the
   physical versus logical bug bit the first time
-- Add the `windows-latest` job to `release.yml`, once and only once it has run
 - SmartScreen: unsigned Windows binaries get a harsher warning than Gatekeeper
 
 ---
