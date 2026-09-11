@@ -54,6 +54,8 @@ type Strings = {
   resolveScheduled: string
   resolveDelete: string
   // questionnaire
+  /** The five answers, never, rarely, sometimes, often, very often. */
+  scale: readonly [string, string, string, string, string]
   questionnaireLede: string
   disclaimer: string
   save: string
@@ -127,6 +129,7 @@ const sr: Strings = {
   resolveDone: 'uradi',
   resolveScheduled: 'zakaži',
   resolveDelete: 'obriši',
+  scale: ['nikada', 'retko', 'ponekad', 'često', 'vrlo često'],
   questionnaireLede: 'ASRS v1.1. Odgovaraj na osnovu poslednjih šest meseci.',
   disclaimer:
     'fokus nije medicinski uređaj i nije odobren ni proveren ni od koga. Upitnik je ASRS v1.1, softver oko njega nije klinički validiran. Rezultat je materijal za razgovor sa lekarom, ne nalaz.',
@@ -191,6 +194,8 @@ const en: Strings = {
   resolveDone: 'done',
   resolveScheduled: 'schedule',
   resolveDelete: 'delete',
+  // The official WHO response options, used verbatim in English.
+  scale: ['never', 'rarely', 'sometimes', 'often', 'very often'],
   questionnaireLede: 'ASRS v1.1. Answer for the past six months.',
   disclaimer:
     'fokus is not a medical device and has not been approved or reviewed by anyone. The questionnaire is ASRS v1.1; the software around it is not clinically validated. The result is something to discuss with a doctor, not a finding.',

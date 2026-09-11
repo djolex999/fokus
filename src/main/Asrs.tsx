@@ -117,16 +117,16 @@ function Form({
             */}
             {LOCALE === 'sr' && <div className="question-original">{question.original}</div>}
             <div className="scale">
-              {SCALE.map((option) => {
-                const selected = answers[question.number] === option.value
+              {SCALE.map((value) => {
+                const selected = answers[question.number] === value
                 return (
                   <button
-                    key={option.value}
+                    key={value}
                     type="button"
                     className={selected ? 'option selected' : 'option'}
-                    onClick={() => onAnswer(question.number, option.value)}
+                    onClick={() => onAnswer(question.number, value)}
                   >
-                    {option.label}
+                    {t.scale[value]}
                   </button>
                 )
               })}

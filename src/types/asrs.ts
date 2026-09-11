@@ -12,13 +12,13 @@
  * further probes, and inventing a score for it would be inventing a measure.
  */
 
-export const SCALE = [
-  { value: 0, label: 'nikada' },
-  { value: 1, label: 'retko' },
-  { value: 2, label: 'ponekad' },
-  { value: 3, label: 'često' },
-  { value: 4, label: 'vrlo često' },
-] as const
+/**
+ * The five points of the scale, values only. The labels live in `i18n.ts` with
+ * every other string: they were hardcoded in Serbian here and stayed Serbian in
+ * an otherwise English app, which is what happens when one file is allowed to
+ * hold copy.
+ */
+export const SCALE = [0, 1, 2, 3, 4] as const
 
 export type Answer = 0 | 1 | 2 | 3 | 4
 
