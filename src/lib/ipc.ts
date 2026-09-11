@@ -37,7 +37,8 @@ export async function shortcutLabel(): Promise<string> {
 export async function setMenuLabels(labels: {
   open: string
   abandon: string
-  music: string
+  musicSilence: string
+  musicPlay: string
   quit: string
 }): Promise<void> {
   await invoke('set_menu_labels', labels)

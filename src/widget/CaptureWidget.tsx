@@ -184,7 +184,8 @@ export function CaptureWidget(): JSX.Element {
       setMenuLabels({
         open: t.trayOpen,
         abandon: t.trayAbandon,
-        music: t.trayMusic,
+        musicSilence: t.trayMusicSilence,
+        musicPlay: t.trayMusicPlay,
         quit: t.trayQuit,
       }).catch((e: unknown) => report(`could not set menu labels: ${describeError(e)}`))
 

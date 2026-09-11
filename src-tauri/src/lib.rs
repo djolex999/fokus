@@ -5,7 +5,7 @@ mod window_pos;
 use std::sync::Mutex;
 use std::time::Instant;
 
-use tauri::menu::{CheckMenuItem, Menu, MenuItem};
+use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
@@ -31,12 +31,14 @@ const WIDGET_WIDTH: f64 = 280.0;
 /// unexplained silence the filter exists to prevent.
 const AUDIO_EXTENSIONS: [&str; 6] = ["mp3", "m4a", "aac", "wav", "aiff", "flac"];
 
-/// The tray's music item, kept so its tick can be corrected when a new session
+/// The tray's music item, kept so its label can be corrected when a new session
 /// turns the music back on.
 struct TrayItems {
     open: MenuItem<tauri::Wry>,
     abandon: MenuItem<tauri::Wry>,
-    music: CheckMenuItem<tauri::Wry>,
+    music: MenuItem<tauri::Wry>,
+    /// (silence, play). Replaced by the widget once it knows the language.
+    music_labels: Mutex<(String, String)>,
     quit: MenuItem<tauri::Wry>,
 }
 
@@ -125,13 +127,14 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let abandon = MenuItem::with_id(app, "abandon", "Prekini sesiju", true, None::<&str>)?;
     // Here rather than in the widget for the same reason abandoning is: rare,
     // deliberate, and it must cost nothing on the path you take every time.
-    let music = CheckMenuItem::with_id(app, "music", "Muzika", true, true, None::<&str>)?;
+    let music = MenuItem::with_id(app, "music", "Utišaj muziku", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &abandon, &music, &quit])?;
     app.manage(TrayItems {
         open: open.clone(),
         abandon: abandon.clone(),
         music: music.clone(),
+        music_labels: Mutex::new(("Utišaj muziku".into(), "Pusti muziku".into())),
         quit: quit.clone(),
     });
 
@@ -159,6 +162,16 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                         return;
                     }
                 };
+                // The label always describes the next click, never the
+                // current state, so nothing has to be read and interpreted
+                // before acting.
+                let items = app.state::<TrayItems>();
+                if let Ok(labels) = items.music_labels.lock() {
+                    let next = if enabled { &labels.0 } else { &labels.1 };
+                    if let Err(e) = items.music.set_text(next) {
+                        eprintln!("[fokus] could not relabel the music item: {e}");
+                    }
+                }
                 if let Err(e) = app.emit_to(WIDGET_LABEL, MUSIC_EVENT, enabled) {
                     eprintln!("[fokus] could not send music state: {e}");
                 }
@@ -250,24 +263,36 @@ fn set_menu_labels(
     app: AppHandle,
     open: String,
     abandon: String,
-    music: String,
+    music_silence: String,
+    music_play: String,
     quit: String,
 ) -> Result<(), String> {
     let items = app.state::<TrayItems>();
     items.open.set_text(open).map_err(|e| e.to_string())?;
     items.abandon.set_text(abandon).map_err(|e| e.to_string())?;
-    items.music.set_text(music).map_err(|e| e.to_string())?;
-    items.quit.set_text(quit).map_err(|e| e.to_string())
+    items.quit.set_text(quit).map_err(|e| e.to_string())?;
+
+    // Whichever label is showing depends on whether the music is currently on,
+    // which a language change must not disturb.
+    let playing = *app.state::<FokusState>().music.lock().map_err(|e| e.to_string())?;
+    items
+        .music
+        .set_text(if playing { &music_silence } else { &music_play })
+        .map_err(|e| e.to_string())?;
+    *items.music_labels.lock().map_err(|e| e.to_string())? = (music_silence, music_play);
+    Ok(())
 }
 
 /// Called when a session starts. Sound comes back for every new session, so the
-/// tick has to come back with it.
+/// label has to go back to offering to silence it.
 #[tauri::command]
 fn reset_music(app: AppHandle, state: State<'_, FokusState>) -> Result<(), String> {
     *state.music.lock().map_err(|e| e.to_string())? = true;
-    app.state::<TrayItems>()
+    let items = app.state::<TrayItems>();
+    let silence = items.music_labels.lock().map_err(|e| e.to_string())?.0.clone();
+    items
         .music
-        .set_checked(true)
+        .set_text(silence)
         .map_err(|e| format!("could not update the music item: {e}"))
 }
 

@@ -100,7 +100,10 @@ type Strings = {
   // tray, sent to Rust
   trayOpen: string
   trayAbandon: string
-  trayMusic: string
+  /** The tray item is an action, not a checkbox: the label says what a click
+   *  will do rather than asking you to read a tick and work it out. */
+  trayMusicSilence: string
+  trayMusicPlay: string
   trayQuit: string
 }
 
@@ -163,7 +166,8 @@ const sr: Strings = {
     'Upitnik za probir, ne dijagnoza. Ne postavlja dijagnozu i ne isključuje je. Stavke su date u prevodu na srpski, ne u zvaničnoj validovanoj verziji.',
   trayOpen: 'Zapisano',
   trayAbandon: 'Prekini sesiju',
-  trayMusic: 'Muzika',
+  trayMusicSilence: 'Utišaj muziku',
+  trayMusicPlay: 'Pusti muziku',
   trayQuit: 'Izađi',
 }
 
@@ -226,7 +230,8 @@ const en: Strings = {
     'A screening questionnaire, not a diagnosis. It does not make one and does not rule one out.',
   trayOpen: 'Written down',
   trayAbandon: 'End session',
-  trayMusic: 'Music',
+  trayMusicSilence: 'Silence music',
+  trayMusicPlay: 'Play music',
   trayQuit: 'Quit',
 }
 
