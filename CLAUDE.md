@@ -34,6 +34,8 @@ Dependency budget: if a package is not required by the constraints above, do not
 
 Taken deliberately, each because Tauri has no API for the job: `objc2` and `objc2-app-kit` for macOS focus return, `windows` for the same on Windows. No frontend dependency has been added since the scaffold.
 
+`tauri.conf.json` hooks call `npm run`, not `pnpm`. pnpm's build script gate rejects `esbuild`, and the setting that permits it has moved between versions twice, so a clone fails on a machine with a different pnpm. `npm run` only executes the package.json script and works regardless of which package manager populated `node_modules`.
+
 ## Windows
 
 | Window | Label | Size | Behavior |
@@ -107,5 +109,6 @@ Never use em dashes in UI copy or docs. Commas, periods, or parentheses.
 - Work session by session per `PLAN.md`. Do not start a later session's work early, even if it seems trivial.
 - Each session ends with a working, runnable app. If it does not run, the session is not done.
 - Run `pnpm tsc --noEmit` and `cargo check` before declaring a session complete.
+- Platform-specific code must compile on both platforms before it is committed. CI does this on every push. `RunEvent::Reopen` reached a Windows machine because checks ran on macOS only, and an isolated type-check of `focus.rs` reported success while `lib.rs` was never in it.
 - If an idea comes up mid-build that is not in the current session's scope: append one line to `IDEJE.md`, do not implement it. This is the paper version of the capture loop.
 - If a constraint above blocks an approach, stop and say so rather than working around it.

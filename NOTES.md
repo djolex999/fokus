@@ -697,3 +697,60 @@ state variable fixed it immediately and removed the whole class of bug.
 
 Reaching for the structural fix earlier would have been faster than continuing to
 excavate. The signal to switch is when the same hypothesis keeps almost fitting.
+
+---
+
+## A partial check reads exactly like a whole one
+
+The Windows focus return was type-checked before it ever ran, by lifting the
+`imp` module out of `focus.rs` into a scratch crate with only the `windows`
+dependency. That caught a genuine mistake: `AttachThreadInput` lives in
+`Win32::System::Threading`, not the keyboard module its name suggests.
+
+Then it passed, and the passing felt like coverage. It was not.
+`RunEvent::Reopen` does not exist on Windows, and the harness could not see
+`lib.rs` because `lib.rs` was never in it. The failure surfaced on a real machine
+after a full dependency download.
+
+The fix was not a better harness. It was CI compiling for both platforms, so the
+gap cannot reopen. **A check that covers part of the problem reports success in
+exactly the same words as one that covers all of it.**
+
+## One file holding copy is one file too many
+
+Every user-facing string was moved into `i18n.ts`, typed identically in both
+languages, and covered by a test asserting key parity, no empty values, no
+English entry still holding Serbian, and every placeholder surviving
+translation. It passed.
+
+The ASRS answer buttons stayed Serbian in an English app for a day, because they
+were declared in `types/asrs.ts` and were therefore never in the set the test
+iterated over. **A consistency test proves consistency across what it was handed,
+and says nothing about what was never handed to it.**
+
+## Correct is not the same as understandable
+
+The tray music item was a checkbox: ticked meant the music was on, clicking it
+turned the music off. Textbook semantics, implemented correctly, and reported as
+"kontra" the first time it was used for real.
+
+A tick asks the reader to establish a state and then infer what a click will do.
+In a menu opened once a week, mid-work, that is a small puzzle at the worst
+possible moment. The label now says what the next click does, "Silence music" or
+"Play music", and there is nothing to infer.
+
+Worth separating from a bug report: nothing was broken. The complaint was about
+the cost of understanding it, which no test would ever have raised.
+
+## The environment is most of the work on a new platform
+
+Getting fokus to run once on Windows cost an evening, and three of the four
+walls were not the code. pnpm's build script gate rejecting `esbuild`, with the
+setting that allows it having moved twice between versions. `link.exe not found`,
+arriving only after 354 crates had downloaded and reading like a compile error.
+rustc exhausting memory on the `windows` crate, fixed with
+`CARGO_BUILD_JOBS=1`.
+
+The permanent fix for the first one was to stop fighting it: the Tauri hooks call
+`npm`, which has no such gate, so the package manager is no longer in the path at
+all.

@@ -1,52 +1,53 @@
 # handoff
 
-Read `CLAUDE.md` for the constraints and `PLAN.md` for the build plan. This file
-is only "where things were left", and is overwritten each sync.
+Read `CLAUDE.md` for the constraints. This file is only "where things were
+left", and is overwritten each sync.
 
 ## Where we left off
 
-All four sessions in `PLAN.md` are built, installed at `/Applications/fokus.app`,
-and running. The repository is public at github.com/djolex999/fokus with a
-landing page live at djolex999.github.io/fokus. The last stretch of work was not
-features: it was bugs found by using the thing, and every one of them was
-invisible rather than loud.
+fokus ships on macOS and Windows. v0.1.3 is published and downloadable, the
+landing page is live at djolex999.github.io/fokus, and CI compiles for both
+platforms on every push. The Windows focus return was written blind on a Mac and
+then run for the first time on a real machine: the capture loop worked on the
+first attempt.
 
-The Windows focus return has been written and compiles for MSVC. It has never
-executed. That distinction is the single most important fact in this file.
+Nothing in the last stretch was a feature. It was bugs found by using the thing,
+and the landing page being rewritten three times to stop selling the ADHD
+screener as a headline.
+
+A session is running right now: `LOOM VIDEO`, unfinished.
 
 ## In flight
 
-- **Windows, untested.** `focus.rs` is implemented for both platforms. `WINDOWS.md`
-  has the setup and the one test that decides it: after Enter, do the letters land
-  back in Notepad. No `windows-latest` job in `release.yml` until it has.
-- **Release v0.1.0 is a draft.** Two DMGs attached, macOS only. Deliberately not
-  published: it should wait for a day of real use, and the tag predates the
-  Windows work anyway, so a Windows build needs a new tag.
-- **The working day gate has still not been met.** The database currently holds a
-  handful of test sessions. Clearing them from statistika is step one of counting
-  for real.
-- **9GB of Rust build cache** in `src-tauri/target`. Gitignored, harmless,
-  reclaimable with `cargo clean` at the cost of one rebuild.
+- **A Reddit post for r/ADHD_Programmers.** Copy is written and ready in the
+  conversation, opening with the personal version that does not state a
+  diagnosis. Needs a screenshot of the capture state, not the start state.
+- **A Show HN was submitted and flagged within a minute.** New account plus a
+  text-only Show HN, which breaks the rule that a Show HN must link to something
+  people can try. Remedy is an email to hn@ycombinator.com, or wait and resubmit
+  properly with the URL in the url field and the description as the first
+  comment. Do not rapidly resubmit.
+- **Five of six features have still never run with real data.** The review list,
+  the return counter, the resume panel, the statistics screen and the printed
+  page. Statistics needs ten sessions and there are six.
 
 ## Blockers
 
-- **The Serbian ASRS is a translation, not the validated instrument.** English now
-  uses the official WHO wording, which removes the problem for English readers,
-  but a Serbian score is still not strictly an ASRS score. Sourcing the official
-  translation is the only real fix and it is a search, not a code change.
-- **Unsigned builds.** Gatekeeper on macOS, SmartScreen on Windows. $99/year for
-  Apple, $200-400/year for an OV certificate. Until then, downloads cost some
-  fraction of visitors at the warning dialog.
-- **The database is not backed up anywhere.** It is one SQLite file outside the
-  repo. For a tool whose whole purpose is accumulating two weeks of evidence,
-  that is the one failure that cannot be recovered from.
+- **Still zero captures.** Six sessions across two days, none of which captured
+  a single thought. The capture loop is the product and it has never been used
+  for its purpose.
+- **The Serbian ASRS is a translation**, not the validated instrument. English
+  now uses the official WHO wording, so this only affects a Serbian reader.
+- **Neither build is signed.** Gatekeeper on macOS, SmartScreen on Windows.
+- **The database is not backed up anywhere** except two by-hand snapshots
+  sitting in the same folder as the original.
 
 ## Next session: start here
 
-Ask how the day of use went, then **read the numbers out of the database rather
-than relying on memory**: sessions started, finished, abandoned, when they broke
-off, captures per session, time of day. The user reports how it felt; the
-database reports what happened. Where those two disagree is the interesting part.
+Ask how the use went, then **read the numbers out of the database rather than
+relying on memory**: sessions, captures, when they broke off, time of day. The
+user reports how it felt; the database reports what happened.
 
-Then, and only then, consider what to change. Everything valuable in the last
-stretch came from use, not from planning.
+Expect the next bugs to be in the five features that have never run. Roughly
+eight bugs surfaced in two days of use and not one of them would have failed a
+build. The capture loop has had that treatment; nothing else has.
