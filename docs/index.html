@@ -115,6 +115,8 @@ a{color:var(--fg)}
 .btn:hover{background:#fff}
 .btn.ghost{background:transparent; color:var(--muted); border:1px solid var(--rule)}
 .btn.ghost:hover{color:var(--fg); border-color:var(--dim); background:transparent}
+.btn.star::before{content:"\2606"; margin-right:7px; color:var(--accent)}
+.btn.star:hover::before{content:"\2605"}
 .caveats{list-style:none; margin-top:26px; display:flex; flex-direction:column; gap:9px}
 .caveats li{color:var(--dim); font-size:13.5px; padding-left:16px; position:relative; max-width:58ch}
 .caveats li::before{content:"—"; position:absolute; left:0; color:var(--rule)}
@@ -218,6 +220,7 @@ footer a{color:var(--muted)}
       <a class="btn" href="https://github.com/djolex999/fokus/releases/latest">Download for macOS</a>
       <a class="btn" href="https://github.com/djolex999/fokus/releases/latest">Download for Windows</a>
       <a class="btn ghost" href="https://github.com/djolex999/fokus">Read the source</a>
+      <a class="btn ghost star" href="https://github.com/djolex999/fokus">Star it on GitHub</a>
     </div>
     <ul class="caveats">
       <li>Neither build is signed. On macOS the first launch needs right-click → Open, or System Settings → Privacy &amp; Security → Open Anyway. On Windows, SmartScreen will warn: More info → Run anyway.</li>
