@@ -79,7 +79,7 @@ Audio, resume panel, return counter, ASRS, statistics.
 
 1. **Local audio.** Read `~/fokus/audio` via a Rust command, take the first file alphabetically, play it looped through a webview `<audio>` element on session start, fade out on end. Missing folder or empty folder is silent and non-fatal. No controls of any kind in the UI; a single `♪` glyph at 50% opacity indicates it is playing.
 2. **Resume panel.** If `now - last_active_at > 5 min`, on next widget interaction render `CaptureState.resumed`: the task plus the last three capture texts. Widget grows downward. Clears on the next keystroke.
-3. **Warm start.** On launch, query the most recent `abandoned` session; prefill its task in the widget with the duration preselected. Enter starts immediately. Escape or typing replaces it. If none exists, plain empty input.
+3. **Warm start.** On launch, query the most recent `abandoned` session ~~;~~ **ended within the last two hours**; prefill its task in the widget with the duration preselected. Enter starts immediately. Escape or typing replaces it. If none exists, plain empty input. **Window added 2026-09-16 after use.** As specified it had no time bound, so it offered a task from five days earlier on every launch, indefinitely, until something else was abandoned.
 4. ~~**Return counter.**~~ Pulled forward into Session 1 on 2026-09-10: the absence of any acknowledgement was noticed within a minute of first use. Implemented as specified, `{n}. povratak` from `COUNT(captures)`, one second, no animation, no movement, no sound. Reconnect `n` to the real session id when Session 2 lands.
 5. **Last minute.** At 60 seconds remaining, progress bar height 2px → 5px and timer text takes the accent color. No other change, no alert.
 

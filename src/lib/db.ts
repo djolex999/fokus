@@ -143,19 +143,34 @@ export async function heartbeatSession(sessionId: number): Promise<void> {
   )
 }
 
-/** The task and duration of the session most recently abandoned, for the warm
- *  start. Null when there has never been one. */
+/**
+ * How recently a session must have been abandoned for the warm start to offer
+ * it back. The point of the warm start is "you quit twenty minutes ago, here is
+ * your thread again", and without a bound it becomes "here is the last thing
+ * you ever failed to finish", offered on every launch until something else is
+ * abandoned. Observed in use: a task from five days earlier, preselected.
+ */
+const WARM_START_WINDOW_HOURS = 2
+
+/** The task and duration of the session most recently abandoned, if that was
+ *  recent enough to still be the thing you are working on. Null otherwise. */
 export async function lastAbandonedSession(): Promise<{
   task: string
   plannedMin: PlannedMinutes
 } | null> {
   const conn = await db()
+  // julianday() rather than a string comparison: both sides are parsed as dates
+  // instead of trusting that the stored ISO format and SQLite's own agree
+  // character for character.
   const rows = await conn.select<Array<{ task: string; planned_min: number }>>(
     `SELECT task, planned_min
        FROM sessions
       WHERE outcome = 'abandoned'
+        AND ended_at IS NOT NULL
+        AND julianday(ended_at) > julianday('now', $1)
       ORDER BY ended_at DESC
       LIMIT 1`,
+    [`-${WARM_START_WINDOW_HOURS} hours`],
   )
   const first = rows[0]
   if (first === undefined) return null

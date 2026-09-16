@@ -19,6 +19,12 @@ the reducer, the widget and the narrowing all read from it, closing a near miss
 where two hand-copied ternaries would have made a 10 minute session resume as a
 25 minute one. Shipped as `cff811e`, CI green on both platforms.
 
+**2026-09-16: the warm start got a two hour window.** It had none, so it
+offered `loom video` from 11 September on every launch, preselected, and would
+have kept doing so until something else was abandoned. Found by looking at the
+widget, not by any test. Shipped with v0.1.4 already tagged, so it rides the
+next tag.
+
 ## What the database says
 
 Read 2026-09-16 from a copy of the live db, with a session running. Everything

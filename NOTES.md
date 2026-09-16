@@ -788,3 +788,46 @@ from three sources, disagreeing only after a restart.
 `DURATIONS` is now declared once and the other three read from it. The fix is
 not that the ternaries were wrong, they were correct for two values. It is that
 a list written out by hand in two files has no way to be told it is incomplete.
+
+## The warm start had no notion of warmth
+
+2026-09-16. Launching the app offered `loom video` as the task, preselected,
+with the duration set. That session ended on 11 September. It had been offering
+it on every launch for five days.
+
+Working exactly as `PLAN.md` specified, which is the interesting part. Session 3
+item 3 says: query the most recent abandoned session and prefill it. The word
+doing the unstated work is "most recent". Most recent among what was written as
+if it meant most recent *lately*, and the code can only read it as most recent
+*ever*. There is no bound in the sentence, so there was none in the query.
+
+Now bounded to two hours, in a named constant. Two rather than something tighter
+because the case it exists for is quitting and coming back, and lunch is inside
+that. Observed relaunch chains in the data are minutes apart, so the window is
+generous on purpose: the cost of offering a task slightly too old is one
+keystroke, and the cost of not offering one that was still live is the whole
+feature.
+
+`julianday()` on both sides rather than comparing ISO strings. Stored timestamps
+are `2026-09-16T07:53:51.967Z` and SQLite's own rendering is not identical
+character for character. A text comparison would work until the day it did not,
+and would fail by silently offering nothing, which looks exactly like having
+nothing to offer.
+
+### Checked against real data, not a fixture
+
+Run against a copy of the live database: the old query returns `loom video`, the
+new one returns nothing. Then a synthetic abandon from ten minutes ago, which is
+returned, and the same row aged to three hours, which is not. The middle step is
+the one that matters. A window like this fails most often by excluding
+everything, and "returns nothing" against a database with no recent abandons
+looks identical to correct.
+
+### The second bug underneath
+
+Session 39 ran 24 of its 25 minutes and was ended by hand one minute short. It is
+recorded as `abandoned`, so it is what the warm start was resurrecting: finished
+work, offered back as unfinished business. The window stops it being offered
+five days later. It does not stop the outcome being wrong, and that same wrong
+outcome reaches the statistics screen and the page meant to be printed for a
+doctor. Still open.
