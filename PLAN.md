@@ -49,7 +49,7 @@ Timer, session lifecycle, styling beyond legibility, main window content, audio,
 
 ### Scope
 
-1. Session lifecycle: start (task text + 25/50 min), countdown, complete, abandon. Writes `sessions` correctly including `outcome`.
+1. Session lifecycle: start (task text + ~~25/50~~ 10/25/50 min), countdown, complete, abandon. Writes `sessions` correctly including `outcome`. **10 added 2026-09-16.** Starting was the hard part, not finishing, and a shorter unit is the only part of the breadcrumb method that survives the no-gamification constraint.
 2. Countdown is derived from `started_at` and wall clock, not from an accumulating interval, so it survives sleep and throttled timers. Tick once per second only to re-render.
 3. `last_active_at` updated on any widget interaction.
 4. Captures now link to the real active session.

@@ -754,3 +754,37 @@ rustc exhausting memory on the `windows` crate, fixed with
 The permanent fix for the first one was to stop fighting it: the Tauri hooks call
 `npm`, which has no such gate, so the package manager is no longer in the path at
 all.
+
+## A third duration, and the feature it is a refusal of
+
+2026-09-16. Added 10 minutes alongside 25 and 50. The toggle is a three way
+cycle now instead of a flip.
+
+It came out of the "breadcrumb method": draw boxes in a notebook, work 5 or 10
+minutes per box, tick the box, and the tick is described as a dopamine hit that
+builds momentum. The tick is the part that does not survive contact with
+`CLAUDE.md`, and it should not. A row of boxes, some filled and some not, is a
+score you can be behind on. It cannot decay gracefully either: it stays on
+screen after the motivation it was meant to produce has worn off, and then it is
+just a reproach. That is precisely what abandoned-is-neutral exists to prevent.
+
+What is left once the tick is removed is not a reward mechanic at all. It is a
+smaller commitment. Starting a session, not finishing one, was the actual
+problem, and 25 minutes is a heavier thing to agree to than 10. The evidence for
+lowering the cost of starting is much better than the evidence for rewarding
+completion, and it needs no UI.
+
+So: one more value in an enum, and nothing else.
+
+### The part that was almost a bug
+
+The duration existed in four places, and two of them narrowed a stored integer
+back into the type by hand: `value === 50 ? 50 : 25` in `toPlannedMinutes`, and
+the same ternary copied into `lastAbandonedSession`. Adding 10 to the union and
+the widget while missing either one would have compiled clean and produced a 10
+minute session that resumed as a 25 minute one. A timer reading four numbers
+from three sources, disagreeing only after a restart.
+
+`DURATIONS` is now declared once and the other three read from it. The fix is
+not that the ternaries were wrong, they were correct for two values. It is that
+a list written out by hand in two files has no way to be told it is incomplete.

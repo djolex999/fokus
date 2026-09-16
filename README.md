@@ -11,7 +11,7 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 ## What it does
 
-**Sessions.** A task and 25 or 50 minutes. The countdown is derived from the wall clock, so it survives sleep. Ending early is recorded as `abandoned` and is treated as data, never as failure — there is no red X anywhere in this app.
+**Sessions.** A task and 10, 25 or 50 minutes. The countdown is derived from the wall clock, so it survives sleep. Ending early is recorded as `abandoned` and is treated as data, never as failure — there is no red X anywhere in this app.
 
 **Capture.** During a session the same shortcut opens a one-line input. Enter saves it and hands focus back. You see `return 3` for a second, then nothing.
 

@@ -4,6 +4,7 @@ import { convertFileSrc } from '@tauri-apps/api/core'
 import { emit, listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import {
+  DURATIONS,
   elapsedFraction,
   formatCountdown,
   partitionOpenSessions,
@@ -606,8 +607,14 @@ function renderBody(
           */}
           <div className="durations" data-tauri-drag-region>
             <span className="mode">{t.newSession}</span>
-            <span className={state.plannedMin === 25 ? 'duration active' : 'duration'}>25</span>
-            <span className={state.plannedMin === 50 ? 'duration active' : 'duration'}>50</span>
+            {DURATIONS.map((minutes) => (
+              <span
+                key={minutes}
+                className={state.plannedMin === minutes ? 'duration active' : 'duration'}
+              >
+                {minutes}
+              </span>
+            ))}
             <span className="duration-hint">{t.durationHint}</span>
           </div>
         </>

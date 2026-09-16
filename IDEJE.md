@@ -1,0 +1,1 @@
+2026-09-16 Gamified micro-wins: breaking a task into 5-10 min chunks with breadcrumb progress feedback. Conflicts with the no-gamification constraint. Raised after a productivity video on dopamine loops.

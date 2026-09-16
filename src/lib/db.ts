@@ -1,5 +1,6 @@
 import Database from '@tauri-apps/plugin-sql'
 import type { OpenSessionRow, PlannedMinutes, RunningSession } from '../types/session'
+import { toPlannedMinutes } from '../types/session'
 import type { Answers } from '../types/asrs'
 import type { CaptureRow, SessionRow } from '../types/stats'
 
@@ -158,9 +159,7 @@ export async function lastAbandonedSession(): Promise<{
   )
   const first = rows[0]
   if (first === undefined) return null
-  // Anything other than the two known durations is treated as the short one
-  // rather than trusted into a type it does not belong to.
-  return { task: first.task, plannedMin: first.planned_min === 50 ? 50 : 25 }
+  return { task: first.task, plannedMin: toPlannedMinutes(first.planned_min) }
 }
 
 /** The most recent capture texts for a session, newest first. Feeds the resume

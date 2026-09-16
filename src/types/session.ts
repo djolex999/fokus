@@ -13,7 +13,7 @@
  * belong to. 'resumed' arrives in Session 3.
  */
 
-export type PlannedMinutes = 25 | 50
+export type PlannedMinutes = 10 | 25 | 50
 
 export type RunningSession = {
   id: number
@@ -103,7 +103,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       return state
     case 'toggleDuration':
       return state.kind === 'starting'
-        ? { ...state, plannedMin: state.plannedMin === 25 ? 50 : 25 }
+        ? { ...state, plannedMin: nextDuration(state.plannedMin) }
         : state
     case 'resume':
       return state.kind === 'running'
@@ -217,9 +217,26 @@ export function partitionOpenSessions(
   }
 }
 
-/** Narrows a stored duration to the two the app offers. */
+/**
+ * The durations offered, in the order the toggle cycles through them. Declared
+ * once: the reducer, the widget row and the narrowing below all read from here,
+ * so a fourth duration cannot be added to one of them and forgotten in another.
+ */
+export const DURATIONS = [10, 25, 50] as const
+
+/** The next duration in the cycle, wrapping at the end. */
+export function nextDuration(current: PlannedMinutes): PlannedMinutes {
+  const at = DURATIONS.indexOf(current)
+  return DURATIONS[(at + 1) % DURATIONS.length] ?? 25
+}
+
+/**
+ * Narrows a stored duration to the ones the app offers. A row written by a
+ * future version, or corrupted, is read as 25 rather than trusted into a type
+ * it does not belong to.
+ */
 export function toPlannedMinutes(value: number): PlannedMinutes {
-  return value === 50 ? 50 : 25
+  return DURATIONS.find((d) => d === value) ?? 25
 }
 
 export function toRunningSession(row: OpenSessionRow): RunningSession {
