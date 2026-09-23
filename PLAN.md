@@ -106,7 +106,7 @@ ASRS, statistics, packaging.
 1. **ASRS v1.1** in the main window: 18 questions, 0-4 scale (Nikada / Retko / Ponekad / Često / Vrlo često). Part A (items 1-6) scored per the WHO shading rubric; store `answers_json` and `part_a_score`.
 2. **Result screen.** Score, then this framing, non-negotiable in substance: the screener does not and cannot produce a diagnosis; take the result to a psychiatrist. No interpretation beyond that sentence. Retakeable, all results timestamped.
 3. **Statistics** (requires ≥10 sessions, otherwise show how many more are needed):
-   - Completion rate by planned duration (25 vs 50)
+   - Completion rate by planned duration (~~25 vs 50~~ per duration offered). **Revised 2026-09-23 after use.** "Completed" is derived, not read off `outcome`: a session ended by hand after 90% of its planned time counts as completed, and one ended inside its first minute, or inside five minutes and replaced by a new session within fifteen seconds (a rename, since a running task cannot be edited), is a false start and is not counted at all. Read straight from `outcome`, session 39 (ended by hand at 24 of 25 minutes) and session 35 (nine seconds, then restarted under a better name) were both reported as abandoned, on the page meant for a doctor.
    - Median minutes to abandonment
    - Captures per session
    - Time-of-day bars: started vs abandoned

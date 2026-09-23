@@ -1,2 +1,3 @@
 2026-09-16 Gamified micro-wins: breaking a task into 5-10 min chunks with breadcrumb progress feedback. Conflicts with the no-gamification constraint. Raised after a productivity video on dopamine loops.
 2026-09-16 Music toggle between kinds of audio, e.g. binaural and classical. Refused: it is a sound library with a picker, forbidden by name, and it puts a decision back into the moment starting is supposed to be free of. The folder is already the switch. Revisit if the folder actually gets swapped several times a week.
+2026-09-23 Rename a running session's task. A typo currently costs a session (end, restart), and the statistics have to detect the restart to avoid counting it as a stop.

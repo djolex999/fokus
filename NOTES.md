@@ -831,3 +831,72 @@ work, offered back as unfinished business. The window stops it being offered
 five days later. It does not stop the outcome being wrong, and that same wrong
 outcome reaches the statistics screen and the page meant to be printed for a
 doctor. Still open.
+
+## What an ending means is derived, like the return count
+
+2026-09-23. The statistics read `outcome` directly, so every session ended by
+hand was a failure. Session 39 ran 24 of its 25 minutes and was ended one minute
+short; session 35 lasted nine seconds and was restarted four seconds later under
+a better name. Both counted as abandoned, and the page built to be handed to a
+doctor reported 6 of 11 sessions completed with a median of 19 minutes before
+stopping.
+
+The stored rows were not wrong. The session really was ended by hand at minute
+24, and that is kept exactly as written. What was wrong is that three readers
+(the statistics, the printed page, the warm start) each needed to know whether
+an ending was a stop or a finish, and each read the raw column as if it said.
+So the answer is derived once, in `classifyEnding`, into four meanings:
+completed, stopped early, false start, open.
+
+- **Ended by hand after 90% of the planned time counts as completed.** Ninety,
+  not eighty. Eighty would call a 50 minute session ended with ten minutes left
+  finished. The page is for a doctor, and a threshold that flattered completion
+  would be as wrong as the one that condemned it.
+- **Under a minute is a false start,** and is dropped from the statistics
+  entirely rather than counted either way. It was never a session.
+- **A share of planned time, not minutes remaining.** Five minutes left is
+  nothing in a 50 and half of a 10.
+
+No schema change and no migration, and the fix reaches every existing row the
+moment it ships. That is the argument for deriving over storing, made for the
+second time in this codebase: the return count already works this way for the
+same reason. A stored classification is a second copy of a fact that can drift
+from the first, and a threshold baked into rows at write time cannot be
+revisited without rewriting history.
+
+The warm start uses the same function, so it offers back only a session that was
+genuinely stopped early. Not one that was finished, and not a false start, whose
+work continued in the very next session under the corrected name.
+
+### Checked by running the real function against the real rows
+
+`stats.ts` compiled to JavaScript with the `tsc` already in the project, run
+against a copy of the live database. The eleven sessions from the 16th classify
+as predicted before a line was written: 35 a false start, 39 completed, 31, 37
+and 38 stopped early. Eight boundary cases also pass, including 22m29s of 25
+(stopped early) against 22m30s (completed), which is the one an off-by-one
+would get wrong. No test runner was added to get this; the dependency budget
+still holds.
+
+### A rename looks like a stop, and the tell is the restart
+
+Session 42 ran 95 seconds and session 43 started four seconds after it ended,
+same work, new name. The same pattern as 35 and 36, but over the one minute
+line, so the first version counted it as stopped early, and that single row
+moved the printed median from 19 minutes to 11.
+
+Duration was only ever a proxy. The actual signal is "ended and immediately
+replaced": the running task cannot be renamed, so a typo costs a session. So a
+session stopped inside its first five minutes and followed by a new one within
+fifteen seconds is also a false start. `classifyEnding` takes the next session's
+start as an argument; the statistics compute it from the sorted rows and the
+warm start from a subquery.
+
+Checked against the real rows. 42 is now a false start. 31, three minutes and
+then the same task restarted thirty seconds later, is not: over the gap, and a
+pause rather than a rename. 38, followed nineteen seconds later, ran 22 minutes
+and is untouched by the rule. Nine boundary cases pass, including 15 seconds
+against 16 and 4m59s against 5m00s.
+
+The root cause, a task that cannot be renamed once started, is still there.
+This measures around it rather than fixing it.

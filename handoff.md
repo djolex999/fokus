@@ -86,7 +86,7 @@ currently producing data that is wrong in the direction of a verdict.
   reaching the user when they do. Those have different fixes and the second is
   testable in about a minute. The capture loop is the product and this is the
   number that matters.
-- **The abandoned/ended distinction above**, because it reaches the printed page.
+- ~~**The abandoned/ended distinction above**, because it reaches the printed page.~~ Fixed 2026-09-23 (`classifyEnding`, derived: 90% counts as completed; under a minute, or a quick stop replaced within 15 s, is a false start). The printed page now reads 11 of 14 completed, median stop 19 min, instead of 6 of 11. Root cause untouched: a running session's task cannot be renamed.
 - **The Serbian ASRS is a translation**, not the validated instrument. English
   now uses the official WHO wording, so this only affects a Serbian reader.
 - **Neither build is signed.** Gatekeeper on macOS, SmartScreen on Windows.

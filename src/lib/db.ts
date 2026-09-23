@@ -3,6 +3,7 @@ import type { OpenSessionRow, PlannedMinutes, RunningSession } from '../types/se
 import { toPlannedMinutes } from '../types/session'
 import type { Answers } from '../types/asrs'
 import type { CaptureRow, SessionRow } from '../types/stats'
+import { classifyEnding } from '../types/stats'
 
 const DB_URL = 'sqlite:fokus.db'
 
@@ -152,8 +153,13 @@ export async function heartbeatSession(sessionId: number): Promise<void> {
  */
 const WARM_START_WINDOW_HOURS = 2
 
-/** The task and duration of the session most recently abandoned, if that was
- *  recent enough to still be the thing you are working on. Null otherwise. */
+/** The task and duration of the session most recently stopped early, if that
+ *  was recent enough to still be the thing you are working on. Null otherwise.
+ *
+ *  A session ended by hand at the finish is not offered back, because it was
+ *  done, and neither is a false start, because the next session is the same
+ *  work under the name that replaced it. Both are decided by `classifyEnding`
+ *  rather than restated in SQL. */
 export async function lastAbandonedSession(): Promise<{
   task: string
   plannedMin: PlannedMinutes
@@ -162,19 +168,31 @@ export async function lastAbandonedSession(): Promise<{
   // julianday() rather than a string comparison: both sides are parsed as dates
   // instead of trusting that the stored ISO format and SQLite's own agree
   // character for character.
-  const rows = await conn.select<Array<{ task: string; planned_min: number }>>(
-    `SELECT task, planned_min
-       FROM sessions
+  const rows = await conn.select<
+    Array<{
+      task: string
+      planned_min: number
+      started_at: string
+      ended_at: string | null
+      next_started_at: string | null
+    }>
+  >(
+    `SELECT task, planned_min, started_at, ended_at,
+            (SELECT MIN(n.started_at) FROM sessions n WHERE n.started_at > s.started_at)
+              AS next_started_at
+       FROM sessions s
       WHERE outcome = 'abandoned'
         AND ended_at IS NOT NULL
         AND julianday(ended_at) > julianday('now', $1)
-      ORDER BY ended_at DESC
-      LIMIT 1`,
+      ORDER BY ended_at DESC`,
     [`-${WARM_START_WINDOW_HOURS} hours`],
   )
-  const first = rows[0]
-  if (first === undefined) return null
-  return { task: first.task, plannedMin: toPlannedMinutes(first.planned_min) }
+  const stopped = rows.find(
+    (row) =>
+      classifyEnding({ ...row, outcome: 'abandoned' }, row.next_started_at) === 'stoppedEarly',
+  )
+  if (stopped === undefined) return null
+  return { task: stopped.task, plannedMin: toPlannedMinutes(stopped.planned_min) }
 }
 
 /** The most recent capture texts for a session, newest first. Feeds the resume
