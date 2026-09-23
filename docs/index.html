@@ -58,6 +58,10 @@ a{color:var(--fg)}
 .widget:focus-within{border-color:#33333c}
 .w-primary{font-size:24px; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-.015em; line-height:1.05}
 .w-secondary{color:var(--muted); font-size:11.5px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.w-row{display:flex; align-items:baseline; gap:9px; min-width:0}
+.w-row .w-secondary{flex:1; min-width:0}
+.w-ends{color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums}
+.w-hint{color:var(--dim); font-size:10.5px; letter-spacing:.06em; margin-left:auto; flex-shrink:0}
 .w-input{
   width:100%; border:0; outline:0; background:transparent; color:var(--fg);
   font-family:var(--sans); font-size:15px; line-height:1.25; padding:0;
@@ -161,8 +165,8 @@ footer a{color:var(--muted)}
 
     <div class="widget" id="widget">
       <div id="w-body">
-        <div class="w-primary" id="w-timer">18:42</div>
-        <div class="w-secondary" id="w-task">write the quarterly report</div>
+        <div class="w-row"><span class="w-primary" id="w-timer">18:42</span><span class="w-ends">until 15:20</span></div>
+        <div class="w-row"><span class="w-secondary" id="w-task">write the quarterly report</span><span class="w-hint">⌘⇧Space</span></div>
       </div>
       <div class="w-bar"><i></i></div>
     </div>
@@ -253,8 +257,8 @@ footer a{color:var(--muted)}
     state = next;
     if (next === 'running') {
       body.innerHTML =
-        '<div class="w-primary">18:42</div>' +
-        '<div class="w-secondary">' + TASK + '</div>';
+        '<div class="w-row"><span class="w-primary">18:42</span><span class="w-ends">until 15:20</span></div>' +
+        '<div class="w-row"><span class="w-secondary">' + TASK + '</span><span class="w-hint">⌘⇧Space</span></div>';
     } else if (next === 'capturing') {
       body.innerHTML =
         '<input class="w-input" id="w-in" placeholder="write it down" ' +

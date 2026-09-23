@@ -39,6 +39,7 @@ export async function setMenuLabels(labels: {
   abandon: string
   musicSilence: string
   musicPlay: string
+  musicFolder: string
   quit: string
 }): Promise<void> {
   await invoke('set_menu_labels', labels)

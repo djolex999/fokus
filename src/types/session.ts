@@ -169,6 +169,17 @@ export function elapsedFraction(session: RunningSession, now: number): number {
   return done >= 1 ? 1 : done
 }
 
+/**
+ * The wall clock time a session is due to end, for display. A countdown says how
+ * much is left and nothing about where that lands in the day, which is the half
+ * time blindness loses: "12 minutes" is abstract, "until 14:35" is a time that
+ * can be planned around. System locale decides 12 or 24 hour.
+ */
+export function formatEndTime(session: RunningSession): string {
+  const end = new Date(Date.parse(session.startedAt) + session.plannedMin * 60_000)
+  return end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
 export function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60

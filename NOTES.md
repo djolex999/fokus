@@ -900,3 +900,45 @@ against 16 and 4m59s against 5m00s.
 
 The root cause, a task that cannot be renamed once started, is still there.
 This measures around it rather than fixing it.
+
+## Four small things for starting, time and memory
+
+2026-09-23. Chosen from a list of ADHD-specific ideas that fit inside
+`CLAUDE.md`. The rest went to `IDEJE.md`.
+
+**The shortcut is visible during a session.** It was shown only while idle,
+when there is nothing to capture, and hidden while a session runs, which is the
+only time it is needed. Sixteen sessions, zero captures. A thought arrives
+exactly when working memory is busy elsewhere, and a key combination that has
+to be recalled at that moment is not there. It sits at the right of the task
+line, the same place and style as the `tab` hint on session start, where the
+task can ellipsize around it. On the timer line, the Windows label
+(`Ctrl+Shift+Space`) beside a 12 hour end time would have overflowed 248px.
+
+This one is also an experiment. If captures stay at zero with the shortcut in
+view, the problem was not the tool, and no feature on the list fixes it.
+
+**The end time sits beside the countdown.** "12 minutes" is abstract; "until
+14:35" is a point in the day that can be planned around, which is the half of
+time blindness a countdown does not help with. Locale decides 12 or 24 hour.
+Muted, and it stays muted in the last minute; only the countdown takes the
+accent.
+
+**The task prompt asks for the first small step.** A whole task has no obvious
+first action, and that is where starting stalls. The tension: the task label
+stays on screen for the session and heads the resume panel, and "open the doc"
+is stale by minute three in a way "quarterly report" is not. Accepted, because
+starting was the stated problem and orientation already has the resume panel's
+recent captures.
+
+**Music settles at 0.7, not full volume.** One level for every track, no
+control. 0.9 was the first reading of "about 10% quieter" and was rejected
+before it shipped: 0.9 is under 1 dB, around the smallest change most people
+hear, so it would have been indistinguishable from not changing anything. 0.7
+is about 3 dB. The tray also gained *Open music folder*, which creates
+`~/fokus/audio` and opens it; the folder is the entire music interface and was
+named only in the README.
+
+Layout checked in a browser with the real stylesheet: mac and Windows labels,
+Serbian and English, 12 and 24 hour, a long task, the last minute. Nothing
+overflows and the widget stays 80px.

@@ -1,3 +1,7 @@
 2026-09-16 Gamified micro-wins: breaking a task into 5-10 min chunks with breadcrumb progress feedback. Conflicts with the no-gamification constraint. Raised after a productivity video on dopamine loops.
 2026-09-16 Music toggle between kinds of audio, e.g. binaural and classical. Refused: it is a sound library with a picker, forbidden by name, and it puts a decision back into the moment starting is supposed to be free of. The folder is already the switch. Revisit if the folder actually gets swapped several times a week.
 2026-09-23 Rename a running session's task. A typo currently costs a session (end, restart), and the statistics have to detect the restart to avoid counting it as a stop.
+2026-09-23 Capture with no session running. Idle, the shortcut opens session start, so typing a thought and pressing Enter starts a session named after it. Needs captures.session_id to become nullable (table rebuild migration) and a decision on what the shortcut means when idle.
+2026-09-23 Show the number of thoughts written down when a session finishes, as a cue to triage before moving on. Passive, in the widget, not a notification.
+2026-09-23 Copy everything marked "schedule" as plain text, so it can be pasted into a calendar or notes. Calendar integration stays forbidden; the clipboard is not.
+2026-09-23 Backup or export of the database. The 76 captures wiped by the clear-history button could not be recovered.

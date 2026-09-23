@@ -19,7 +19,7 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 **Come back.** Away for five minutes or more and the widget shows your task plus the last three things you captured, so you can pick up the thread without opening anything.
 
-**Sound.** Drop audio files in `~/fokus/audio` and the first one plays, looped, for the duration of a session. There are no controls: a `♪` at half opacity tells you it is playing, and that is the entire interface.
+**Sound.** Drop audio files in `~/fokus/audio` (the tray's *Open music folder* creates it and opens it) and the first one plays, looped, for the duration of a session. There are no controls: a `♪` at half opacity tells you it is playing, and that is the entire interface.
 
 **Evidence.** The WHO ASRS v1.1 screener, plus statistics over your sessions, printable as a single page to take to a doctor.
 

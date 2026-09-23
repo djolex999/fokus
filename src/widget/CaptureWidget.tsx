@@ -7,6 +7,7 @@ import {
   DURATIONS,
   elapsedFraction,
   formatCountdown,
+  formatEndTime,
   partitionOpenSessions,
   remainingSeconds,
   sessionOf,
@@ -72,6 +73,12 @@ const LAST_MINUTE_S = 60
 const FADE_IN_MS = 3000
 const FADE_OUT_MS = 2000
 const FADE_STEP_MS = 50
+/**
+ * Where the fade in stops. Below full volume because the sound is meant to sit
+ * behind the work, and a track mastered loud arrived at full volume in front of
+ * it. One level for every track: a volume control would be a setting.
+ */
+const MUSIC_VOLUME = 0.7
 
 const initialState: WidgetState = { kind: 'idle' }
 
@@ -198,7 +205,7 @@ export function CaptureWidget(): JSX.Element {
       .play()
       .then(() => {
         setPlaying(true)
-        fadeTo(1)
+        fadeTo(MUSIC_VOLUME)
       })
       .catch((e: unknown) => report(`audio: play refused: ${describeError(e)}`))
   }, [fadeTo])
@@ -208,7 +215,7 @@ export function CaptureWidget(): JSX.Element {
     if (element === null || element.paused) return
     fadeTo(0, () => {
       element.pause()
-      element.volume = 1
+      element.volume = MUSIC_VOLUME
       setPlaying(false)
     })
   }, [fadeTo])
@@ -233,6 +240,7 @@ export function CaptureWidget(): JSX.Element {
         abandon: t.trayAbandon,
         musicSilence: t.trayMusicSilence,
         musicPlay: t.trayMusicPlay,
+        musicFolder: t.trayMusicFolder,
         quit: t.trayQuit,
       }).catch((e: unknown) => report(`could not set menu labels: ${describeError(e)}`))
 
@@ -623,11 +631,22 @@ function renderBody(
     case 'running':
       return (
         <>
-          <div className={lastMinute ? 'timer last-minute' : 'timer'} data-tauri-drag-region>
-            {formatCountdown(remainingSeconds(state.session, now))}
+          <div className="timer-row" data-tauri-drag-region>
+            <span className={lastMinute ? 'timer last-minute' : 'timer'}>
+              {formatCountdown(remainingSeconds(state.session, now))}
+            </span>
+            <span className="ends">{fill(t.endsAt, { time: formatEndTime(state.session) })}</span>
           </div>
-          <div className="secondary" data-tauri-drag-region>
-            {state.session.task}
+          {/*
+            The shortcut stays in view for the whole session. Until this it was
+            shown only while idle, when there is nothing to capture, and hidden
+            during a session, which is the one time it is needed. A thought
+            arrives exactly when working memory is busy elsewhere; a key
+            combination that has to be remembered at that moment is not there.
+          */}
+          <div className="task-row" data-tauri-drag-region>
+            <span className="secondary">{state.session.task}</span>
+            <span className="shortcut-hint">{shortcut}</span>
           </div>
         </>
       )

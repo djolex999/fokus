@@ -30,9 +30,13 @@ export function detectLocale(): Locale {
 
 type Strings = {
   // widget
+  /** Asks for the first physical step rather than the task. A whole task has
+   *  no obvious first action and that is where starting stalls. */
   taskPlaceholder: string
   capturePlaceholder: string
   newSession: string
+  /** Beside the countdown: the wall clock time the session ends. */
+  endsAt: string
   durationHint: string
   /** `{n}` is the number of the return. */
   returnCount: string
@@ -106,13 +110,15 @@ type Strings = {
    *  will do rather than asking you to read a tick and work it out. */
   trayMusicSilence: string
   trayMusicPlay: string
+  trayMusicFolder: string
   trayQuit: string
 }
 
 const sr: Strings = {
-  taskPlaceholder: 'na čemu radiš',
+  taskPlaceholder: 'prvi mali korak',
   capturePlaceholder: 'zapiši misao',
   newSession: 'nova sesija',
+  endsAt: 'do {time}',
   durationHint: 'tab',
   returnCount: '{n}. povratak',
   errDatabase: 'baza nije otvorena',
@@ -171,13 +177,15 @@ const sr: Strings = {
   trayAbandon: 'Prekini sesiju',
   trayMusicSilence: 'Utišaj muziku',
   trayMusicPlay: 'Pusti muziku',
+  trayMusicFolder: 'Otvori folder s muzikom',
   trayQuit: 'Izađi',
 }
 
 const en: Strings = {
-  taskPlaceholder: 'what are you working on',
+  taskPlaceholder: 'first small step',
   capturePlaceholder: 'write it down',
   newSession: 'new session',
+  endsAt: 'until {time}',
   durationHint: 'tab',
   returnCount: 'return {n}',
   errDatabase: 'database did not open',
@@ -237,6 +245,7 @@ const en: Strings = {
   trayAbandon: 'End session',
   trayMusicSilence: 'Silence music',
   trayMusicPlay: 'Play music',
+  trayMusicFolder: 'Open music folder',
   trayQuit: 'Quit',
 }
 

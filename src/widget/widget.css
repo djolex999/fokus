@@ -122,11 +122,42 @@ body {
   color: var(--fg);
 }
 
-.duration-hint {
+.duration-hint,
+.shortcut-hint {
   color: var(--dim);
   font-size: 10.5px;
   letter-spacing: 0.06em;
   margin-left: auto;
+}
+
+/* Countdown, then the clock time it runs out. */
+.timer-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.ends {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Task on the left, allowed to ellipsize; the shortcut on the right never is. */
+.task-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.task-row .secondary {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-row .shortcut-hint {
+  flex-shrink: 0;
 }
 
 /* Deliberately the same size, colour and line position as .hint: the

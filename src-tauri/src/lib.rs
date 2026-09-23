@@ -37,6 +37,7 @@ struct TrayItems {
     open: MenuItem<tauri::Wry>,
     abandon: MenuItem<tauri::Wry>,
     music: MenuItem<tauri::Wry>,
+    music_folder: MenuItem<tauri::Wry>,
     /// (silence, play). Replaced by the widget once it knows the language.
     music_labels: Mutex<(String, String)>,
     quit: MenuItem<tauri::Wry>,
@@ -128,12 +129,18 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // Here rather than in the widget for the same reason abandoning is: rare,
     // deliberate, and it must cost nothing on the path you take every time.
     let music = MenuItem::with_id(app, "music", "Utišaj muziku", true, None::<&str>)?;
+    // The folder is the whole music interface, and until this item it was named
+    // only in the README: someone who downloaded the app had no way to learn
+    // that sound was possible at all.
+    let music_folder =
+        MenuItem::with_id(app, "music_folder", "Otvori folder s muzikom", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &abandon, &music, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &abandon, &music, &music_folder, &quit])?;
     app.manage(TrayItems {
         open: open.clone(),
         abandon: abandon.clone(),
         music: music.clone(),
+        music_folder: music_folder.clone(),
         music_labels: Mutex::new(("Utišaj muziku".into(), "Pusti muziku".into())),
         quit: quit.clone(),
     });
@@ -176,6 +183,11 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("[fokus] could not send music state: {e}");
                 }
             }
+            "music_folder" => {
+                if let Err(e) = open_music_folder(app) {
+                    eprintln!("[fokus] could not open the music folder: {e}");
+                }
+            }
             "abandon" => {
                 if let Err(e) = app.emit_to(WIDGET_LABEL, ABANDON_EVENT, ()) {
                     eprintln!("[fokus] could not send abandon: {e}");
@@ -202,8 +214,39 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 /// outcome here, never an error.
 #[tauri::command]
 fn audio_track(app: AppHandle) -> Option<String> {
-    let dir = app.path().home_dir().ok()?.join("fokus").join("audio");
+    let dir = audio_dir(&app)?;
     first_playable(&dir).map(|path| path.to_string_lossy().into_owned())
+}
+
+fn audio_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    Some(app.path().home_dir().ok()?.join("fokus").join("audio"))
+}
+
+/// Creates ~/fokus/audio if it is missing, then shows it in the system file
+/// manager. Created rather than reported missing: the person clicking this wants
+/// somewhere to drop a file, and an error saying there is nowhere is the least
+/// useful answer available.
+///
+/// The platform's own opener through `Command` rather than a plugin. Three lines
+/// per platform do not justify a dependency.
+fn open_music_folder(app: &AppHandle) -> Result<(), String> {
+    let dir = audio_dir(app).ok_or("no home directory")?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+
+    #[cfg(target_os = "macos")]
+    let opener = "open";
+    #[cfg(target_os = "windows")]
+    let opener = "explorer";
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let opener = "xdg-open";
+
+    // Spawned, not waited on: explorer.exe exits with 1 even when it succeeds,
+    // so its status says nothing, and the menu must not block on a window.
+    std::process::Command::new(opener)
+        .arg(&dir)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("{opener}: {e}"))
 }
 
 /// Split out from the command so it can be tested without an app handle.
@@ -265,11 +308,13 @@ fn set_menu_labels(
     abandon: String,
     music_silence: String,
     music_play: String,
+    music_folder: String,
     quit: String,
 ) -> Result<(), String> {
     let items = app.state::<TrayItems>();
     items.open.set_text(open).map_err(|e| e.to_string())?;
     items.abandon.set_text(abandon).map_err(|e| e.to_string())?;
+    items.music_folder.set_text(music_folder).map_err(|e| e.to_string())?;
     items.quit.set_text(quit).map_err(|e| e.to_string())?;
 
     // Whichever label is showing depends on whether the music is currently on,
