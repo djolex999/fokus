@@ -942,3 +942,23 @@ named only in the README.
 Layout checked in a browser with the real stylesheet: mac and Windows labels,
 Serbian and English, 12 and 24 hour, a long task, the last minute. Nothing
 overflows and the widget stays 80px.
+
+## Read the numbers before writing the diff
+
+2026-09-23. The 10 minute option was built on a report, "starting is hard",
+before anyone looked at the database. The database showed the duration toggle
+had never been moved in eleven sessions. The option turned out to get used, but
+that was luck rather than evidence. Separately, `COUNT(*) = 0` on `captures`
+read as "the capture loop has never been used" until `sqlite_sequence` showed 76
+captures made and then wiped. Before building on a claim about usage, copy the
+db and read it, autoincrement high-water marks included: an empty table and an
+emptied one look identical from a count.
+
+## A draft release is the only window where moving a tag is safe
+
+2026-09-23. The warm start fix landed after v0.1.4 was tagged and pushed. The
+release was still a draft, so the tag was moved to the fix and the build rerun,
+rather than shipping a bug that was already fixed on master. The rule against
+moving pushed tags exists because people have fetched them; a draft nobody can
+download has no such people. Once published, a fix is the next version. Check
+`gh release list` for `Draft` before choosing.

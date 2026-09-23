@@ -102,10 +102,11 @@ Informal second person, matching the tone of the concept note. Terse. No exclama
 
 The ASRS items are the exception to "translate everything": in English the official WHO wording *is* the question, so nothing is shown beneath it. In Serbian the question is a translation of mine, so the original stays visible underneath and the printed page says so.
 
-Never use em dashes in UI copy or docs. Commas, periods, or parentheses.
+Never use em dashes in UI copy or in text written for the user to publish (posts, release notes). Commas, periods, or parentheses. Repo docs (NOTES, PLAN, README) are exempt.
 
 ## Working agreement
 
+- Releases: the tag message is the release note, written for users. The release workflow publishes a draft with an empty body; before publishing, check it was built from the tagged commit with all six installers attached, then copy the tag message in with paragraphs unwrapped.
 - Work session by session per `PLAN.md`. Do not start a later session's work early, even if it seems trivial.
 - Each session ends with a working, runnable app. If it does not run, the session is not done.
 - Run `pnpm tsc --noEmit` and `cargo check` before declaring a session complete.
