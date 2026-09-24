@@ -962,3 +962,65 @@ rather than shipping a bug that was already fixed on master. The rule against
 moving pushed tags exists because people have fetched them; a draft nobody can
 download has no such people. Once published, a fix is the next version. Check
 `gh release list` for `Draft` before choosing.
+
+## Session 5: capture anywhere
+
+2026-09-24. With no session running, the shortcut used to open session start.
+So the capture habit, "shortcut, type, Enter", typed with no session, produced a
+session named after the thought. It happened on 2026-09-23 at 18:48: `Reply to
+email`, 36 seconds, confirmed afterwards as a thought. Seventeen sessions and
+zero captures up to that point, and at least one of the zeros was this.
+
+### The shortcut means capture first, everywhere
+
+Idle, the shortcut now opens `noting`: the input is a thought, and Enter writes
+it down. Tab is one ring, thought → 25 → 50 → 10 → thought, so starting a
+session costs one Tab for the usual 25. Rejected: keeping session start as the
+default with a modifier for thoughts (plain Enter would still do what happened
+at 18:48), and a second global shortcut (a second key to remember is the cost
+this app exists to remove). Starting a session is deliberate and rare; catching
+a thought is the product and has to be the reflex.
+
+`noting` is its own state rather than a mode flag on `starting`, so the union
+still says what is on screen. The row names the mode by highlighting it,
+`thought 10 25 50`, which replaced the `new session` label.
+
+One trap found before it shipped: the focus effect selects the input's text on
+every state change, which is right on arrival (a warm start's prefilled task is
+replaced by the first keystroke) and wrong on Tab, where it would make the next
+keystroke wipe the draft. A move within the ring keeps the caret.
+
+### No number outside a session
+
+A thought saved outside a session shows `written down` for a second. The return
+counter means returns within a session, and there is nothing to return to. A
+count per day was considered and refused: a new counter that resets daily is a
+streak by another name.
+
+Returns this week and last week do include session-less captures. Catching a
+thought instead of following it is the same act either way, and it is the
+number the experiment is watching.
+
+### Migration 6 keeps the high-water mark
+
+`session_id` lost NOT NULL, which SQLite cannot drop in place, so the table is
+rebuilt. Checked before writing it: a plain rebuild resets the AUTOINCREMENT
+mark to the largest surviving id (5 became 2 in the test, so id 3 would have
+been reused), and that mark is the only record of the 76 captures that were
+made and wiped. The migration carries it across. Run against a copy of the real
+database and three constructed ones (rows with a deleted gap, empty but used,
+never used) before being committed, then on the live database with a
+`.backup` taken first: migrations 1 to 6 applied, `session_id` nullable, mark
+still 76, 20 sessions, integrity ok.
+
+### Verified, and not
+
+The reducer was compiled with the project's own `tsc` and driven through 23
+transitions: the full Tab ring and back with the draft intact, Enter and Escape
+from both new states, the shortcut from every state, warm start, and capture in
+a session still returning a number. `tsc`, `cargo check`, `cargo test` clean.
+
+Not verified by Claude: the shortcut in the installed build, end to end. Access
+to drive the app was declined, and saving a test thought would have put a row
+into the database the experiment is counting. The first real thought is the
+test.

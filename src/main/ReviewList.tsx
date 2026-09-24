@@ -86,7 +86,9 @@ export function ReviewList(): JSX.Element {
               <div className="row-text">
                 <span className="text">{row.text}</span>
                 <span className="meta">
-                  {formatTime(row.created_at)} · {row.task}
+                  {row.task === null
+                    ? formatTime(row.created_at)
+                    : `${formatTime(row.created_at)} · ${row.task}`}
                 </span>
               </div>
               <div className="row-actions">

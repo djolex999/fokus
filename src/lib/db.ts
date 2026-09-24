@@ -209,7 +209,8 @@ export async function recentCaptureTexts(sessionId: number, limit: number): Prom
   return rows.map((row) => row.text)
 }
 
-export async function insertCapture(sessionId: number, text: string): Promise<void> {
+/** `sessionId` is null for a thought written down with no session running. */
+export async function insertCapture(sessionId: number | null, text: string): Promise<void> {
   const conn = await db()
   await conn.execute(
     'INSERT INTO captures (session_id, text, created_at) VALUES ($1, $2, $3)',
@@ -238,7 +239,8 @@ export type PendingCapture = {
   id: number
   text: string
   created_at: string
-  task: string
+  /** Null when it was written down outside a session. */
+  task: string | null
 }
 
 export async function pendingCaptures(): Promise<PendingCapture[]> {
@@ -246,7 +248,7 @@ export async function pendingCaptures(): Promise<PendingCapture[]> {
   return conn.select<PendingCapture[]>(
     `SELECT c.id, c.text, c.created_at, s.task
        FROM captures c
-       JOIN sessions s ON s.id = c.session_id
+       LEFT JOIN sessions s ON s.id = c.session_id
       WHERE c.resolved IS NULL
       ORDER BY c.created_at DESC`,
   )
@@ -309,7 +311,7 @@ export async function allCaptureTimes(): Promise<CaptureRow[]> {
  * clinical screener rather than a by product of using the timer, and someone
  * clearing their session history is not asking to lose them.
  *
- * Captures go first: `captures.session_id` is a NOT NULL foreign key, so the
+ * Captures go first: `captures.session_id` is a foreign key, so the
  * other order would leave orphans behind wherever enforcement is off.
  */
 export async function clearAllSessions(): Promise<{ sessions: number; captures: number }> {

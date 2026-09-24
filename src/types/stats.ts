@@ -16,7 +16,8 @@ export type SessionRow = {
 }
 
 export type CaptureRow = {
-  session_id: number
+  /** Null for a thought written down with no session running. */
+  session_id: number | null
   created_at: string
 }
 
@@ -202,7 +203,8 @@ export function computeStats(
     capturesPerSession:
       sessions.length === 0
         ? 0
-        : captures.filter((c) => counted.has(c.session_id)).length / sessions.length,
+        : captures.filter((c) => c.session_id !== null && counted.has(c.session_id)).length /
+          sessions.length,
     byHour,
     returnsThisWeek,
     returnsLastWeek,

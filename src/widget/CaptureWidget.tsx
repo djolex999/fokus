@@ -422,20 +422,42 @@ export function CaptureWidget(): JSX.Element {
 
   // Focus follows the state machine rather than the event handler, so every
   // path into a text state lands the caret in the same place.
+  //
+  // Selecting the text is for arriving: a warm start's prefilled task is
+  // replaced by the first keystroke. Tab between the thought and a duration
+  // also changes the state, and selecting there would make the next keystroke
+  // wipe what was already typed, so a move within that ring keeps the caret.
+  const previousKind = useRef<WidgetState['kind']>(state.kind)
   useEffect(() => {
-    if (state.kind !== 'capturing' && state.kind !== 'starting' && state.kind !== 'resumed') {
+    const previous = previousKind.current
+    previousKind.current = state.kind
+    if (
+      state.kind !== 'capturing' &&
+      state.kind !== 'starting' &&
+      state.kind !== 'noting' &&
+      state.kind !== 'resumed'
+    ) {
       return
     }
     const input = inputRef.current
     if (input === null) return
     input.focus()
-    input.select()
+    const withinRing =
+      (previous === 'noting' || previous === 'starting') &&
+      (state.kind === 'noting' || state.kind === 'starting')
+    if (!withinRing) input.select()
     void mark('input focused')
   }, [state.kind, focusTick])
 
   useEffect(() => {
     if (state.kind !== 'confirmed') return
     const timer = window.setTimeout(() => dispatch({ type: 'captureDismissed' }), CONFIRMATION_MS)
+    return () => window.clearTimeout(timer)
+  }, [state.kind])
+
+  useEffect(() => {
+    if (state.kind !== 'noted') return
+    const timer = window.setTimeout(() => dispatch({ type: 'dismiss' }), CONFIRMATION_MS)
     return () => window.clearTimeout(timer)
   }, [state.kind])
 
@@ -470,6 +492,32 @@ export function CaptureWidget(): JSX.Element {
       // and a silence carried over from yesterday would quietly remove it. The
       // playing itself already started in the key handler.
       resetMusic().catch((e: unknown) => report(`could not reset music: ${describeError(e)}`))
+    },
+    [returnFocus],
+  )
+
+  /** A thought with no session running. Same path as a capture, less the
+   *  session: the row, then the acknowledgement, then focus back. */
+  const commitNote = useCallback(
+    async (draft: string): Promise<void> => {
+      const text = draft.trim()
+      if (text === '') {
+        dispatch({ type: 'dismiss' })
+        await returnFocus()
+        return
+      }
+      try {
+        await insertCapture(null, text)
+      } catch (e: unknown) {
+        // As with a capture: the text stays in the input rather than vanishing.
+        setError(failure(t.errNotSaved, e))
+        return
+      }
+      void mark('row inserted')
+      dispatch({ type: 'noteSaved' })
+      void mark('confirmation shown')
+      await returnFocus()
+      void emit(CAPTURES_CHANGED_EVENT)
     },
     [returnFocus],
   )
@@ -512,13 +560,18 @@ export function CaptureWidget(): JSX.Element {
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>): void => {
       const current = stateRef.current
-      if (event.key === 'Tab' && current.kind === 'starting') {
+      if (event.key === 'Tab' && (current.kind === 'starting' || current.kind === 'noting')) {
         event.preventDefault()
-        dispatch({ type: 'toggleDuration' })
+        dispatch({ type: 'cycle' })
         return
       }
       if (event.key === 'Enter') {
         event.preventDefault()
+        if (current.kind === 'noting') {
+          void mark('enter pressed')
+          void commitNote(current.draft)
+          return
+        }
         if (current.kind === 'starting') {
           // Synchronous, before any await, so the webview still counts this
           // keypress as the gesture that started the sound.
@@ -539,7 +592,7 @@ export function CaptureWidget(): JSX.Element {
       }
       if (event.key === 'Escape') {
         event.preventDefault()
-        if (current.kind === 'starting') {
+        if (current.kind === 'starting' || current.kind === 'noting') {
           dispatch({ type: 'dismiss' })
         } else if (current.kind === 'capturing' || current.kind === 'resumed') {
           dispatch({ type: 'captureDismissed' })
@@ -547,7 +600,7 @@ export function CaptureWidget(): JSX.Element {
         void returnFocus()
       }
     },
-    [beginSession, commitCapture, returnFocus, startAudio],
+    [beginSession, commitCapture, commitNote, returnFocus, startAudio],
   )
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
@@ -571,6 +624,27 @@ export function CaptureWidget(): JSX.Element {
       )}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={audioRef} preload="none" />
+    </div>
+  )
+}
+
+/**
+ * The Tab ring, with whatever Enter will do highlighted: write the thought
+ * down, or start a session of that length. It states the mode rather than
+ * implying it; with one shortcut doing two things depending on what is
+ * running, remembering which mode you are in is exactly the kind of invisible
+ * bookkeeping this app exists to remove.
+ */
+function choiceRow(active: 'thought' | PlannedMinutes): JSX.Element {
+  return (
+    <div className="durations" data-tauri-drag-region>
+      <span className={active === 'thought' ? 'duration active' : 'duration'}>{t.thought}</span>
+      {DURATIONS.map((minutes) => (
+        <span key={minutes} className={active === minutes ? 'duration active' : 'duration'}>
+          {minutes}
+        </span>
+      ))}
+      <span className="duration-hint">{t.durationHint}</span>
     </div>
   )
 }
@@ -606,26 +680,33 @@ function renderBody(
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          {/*
-            States the mode rather than implying it. The same keystroke starts a
-            session here and captures a thought while one runs, and until now the
-            only thing distinguishing them was a placeholder. Remembering which
-            mode you are in is exactly the kind of invisible bookkeeping this app
-            exists to remove.
-          */}
-          <div className="durations" data-tauri-drag-region>
-            <span className="mode">{t.newSession}</span>
-            {DURATIONS.map((minutes) => (
-              <span
-                key={minutes}
-                className={state.plannedMin === minutes ? 'duration active' : 'duration'}
-              >
-                {minutes}
-              </span>
-            ))}
-            <span className="duration-hint">{t.durationHint}</span>
-          </div>
+          {choiceRow(state.plannedMin)}
         </>
+      )
+
+    case 'noting':
+      return (
+        <>
+          <input
+            ref={inputRef}
+            className="capture-input"
+            type="text"
+            value={state.draft}
+            placeholder={t.capturePlaceholder}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+          {choiceRow('thought')}
+        </>
+      )
+
+    case 'noted':
+      return (
+        <div className="confirmed" data-tauri-drag-region>
+          {t.noted}
+        </div>
       )
 
     case 'running':

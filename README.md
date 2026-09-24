@@ -13,7 +13,7 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 **Sessions.** A task and 10, 25 or 50 minutes. The countdown is derived from the wall clock, so it survives sleep. Ending early is recorded as `abandoned` and is treated as data, never as failure — there is no red X anywhere in this app.
 
-**Capture.** During a session the same shortcut opens a one-line input. Enter saves it and hands focus back. You see `return 3` for a second, then nothing.
+**Capture.** The shortcut opens a one-line input whether or not a session is running. Enter saves it and hands focus back. In a session you see `return 3` for a second, outside one `written down`, then nothing. With no session running, Tab turns the same input into a session start: thought, then 25, 50 and 10 minutes.
 
 **Review.** Everything you wrote down, triaged as *done*, *schedule* or *delete*.
 

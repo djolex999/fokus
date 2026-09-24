@@ -33,6 +33,12 @@ export type RunningSession = {
 
 export type WidgetState =
   | { kind: 'idle' }
+  /** The shortcut with no session running: a thought, written down without
+   *  one. Tab moves to `starting`. */
+  | { kind: 'noting'; draft: string }
+  /** One second of "written down" after a thought saved outside a session. No
+   *  number: the return counter counts returns within a session. */
+  | { kind: 'noted' }
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
@@ -49,7 +55,9 @@ export type WidgetAction =
   | { type: 'warmStart'; task: string; plannedMin: PlannedMinutes }
   | { type: 'touched'; at: string }
   | { type: 'edit'; draft: string }
-  | { type: 'toggleDuration' }
+  /** Tab: thought, then each duration, then back to thought. */
+  | { type: 'cycle' }
+  | { type: 'noteSaved' }
   | { type: 'sessionStarted'; session: RunningSession }
   | { type: 'captureConfirmed'; returnNumber: number }
   | { type: 'captureDismissed' }
@@ -66,19 +74,39 @@ export function sessionOf(state: WidgetState): RunningSession | null {
     case 'resumed':
       return state.session
     case 'idle':
+    case 'noting':
+    case 'noted':
     case 'starting':
     case 'finished':
       return null
   }
 }
 
+/**
+ * The order Tab visits the choices in, starting from the thought. Durations
+ * follow from the default rather than from `DURATIONS` order, so one Tab lands
+ * on 25, the length used most, and the rest wrap round after it.
+ */
+export const DEFAULT_DURATION: PlannedMinutes = 25
+
+/** The duration after `current` in the ring, or null when the ring wraps back
+ *  to the thought. */
+function afterDuration(current: PlannedMinutes): PlannedMinutes | null {
+  const next = nextDuration(current)
+  return next === DEFAULT_DURATION ? null : next
+}
+
 export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetState {
   switch (action.type) {
     case 'shortcut':
       switch (state.kind) {
+        // Nothing running: the shortcut writes a thought down. It used to open
+        // session start, so the capture habit, typed with no session, produced
+        // a session named after the thought.
         case 'idle':
         case 'finished':
-          return { kind: 'starting', draft: '', plannedMin: 25 }
+        case 'noted':
+          return { kind: 'noting', draft: '' }
         case 'running':
           return { kind: 'capturing', session: state.session, draft: '' }
         case 'confirmed':
@@ -87,12 +115,14 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
           return state
         // Firing again mid typing keeps the draft: the shortcut can be pressed
         // twice before the window is up.
+        case 'noting':
         case 'starting':
         case 'capturing':
           return state
       }
       break
     case 'edit':
+      if (state.kind === 'noting') return { ...state, draft: action.draft }
       if (state.kind === 'starting') return { ...state, draft: action.draft }
       if (state.kind === 'capturing') return { ...state, draft: action.draft }
       // The resume panel clears on the first keystroke, and that keystroke is
@@ -101,10 +131,18 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         return { kind: 'capturing', session: state.session, draft: action.draft }
       }
       return state
-    case 'toggleDuration':
-      return state.kind === 'starting'
-        ? { ...state, plannedMin: nextDuration(state.plannedMin) }
-        : state
+    case 'cycle': {
+      if (state.kind === 'noting') {
+        return { kind: 'starting', draft: state.draft, plannedMin: DEFAULT_DURATION }
+      }
+      if (state.kind !== 'starting') return state
+      const next = afterDuration(state.plannedMin)
+      return next === null
+        ? { kind: 'noting', draft: state.draft }
+        : { ...state, plannedMin: next }
+    }
+    case 'noteSaved':
+      return state.kind === 'noting' ? { kind: 'noted' } : state
     case 'resume':
       return state.kind === 'running'
         ? { kind: 'resumed', session: state.session, recent: action.recent }
@@ -148,7 +186,12 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
     case 'sessionAbandoned':
       return { kind: 'idle' }
     case 'dismiss':
-      return state.kind === 'starting' || state.kind === 'finished' ? { kind: 'idle' } : state
+      return state.kind === 'starting' ||
+        state.kind === 'finished' ||
+        state.kind === 'noting' ||
+        state.kind === 'noted'
+        ? { kind: 'idle' }
+        : state
   }
   return state
 }

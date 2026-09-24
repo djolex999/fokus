@@ -34,7 +34,10 @@ type Strings = {
    *  no obvious first action and that is where starting stalls. */
   taskPlaceholder: string
   capturePlaceholder: string
-  newSession: string
+  /** First stop on the Tab ring: write a thought down, no session. */
+  thought: string
+  /** Shown for a second after a thought saved outside a session. */
+  noted: string
   /** Beside the countdown: the wall clock time the session ends. */
   endsAt: string
   durationHint: string
@@ -117,7 +120,8 @@ type Strings = {
 const sr: Strings = {
   taskPlaceholder: 'prvi mali korak',
   capturePlaceholder: 'zapiši misao',
-  newSession: 'nova sesija',
+  thought: 'misao',
+  noted: 'zapisano',
   endsAt: 'do {time}',
   durationHint: 'tab',
   returnCount: '{n}. povratak',
@@ -184,7 +188,8 @@ const sr: Strings = {
 const en: Strings = {
   taskPlaceholder: 'first small step',
   capturePlaceholder: 'write it down',
-  newSession: 'new session',
+  thought: 'thought',
+  noted: 'written down',
   endsAt: 'until {time}',
   durationHint: 'tab',
   returnCount: 'return {n}',

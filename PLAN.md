@@ -124,6 +124,39 @@ ASRS, statistics, packaging.
 
 ---
 
+## Session 5 — capture anywhere
+
+Added 2026-09-24, after v1. Not part of the original four.
+
+**Goal:** a thought can be written down whether or not a session is running, and the habit "shortcut, type, Enter" never does anything but write it down.
+
+**Evidence.** Seventeen sessions, zero captures. On 2026-09-23 at 18:48, with no session running, a thought was typed into the shortcut and Enter started a 36 second session called `Reply to email`. Idle, the shortcut opened session start, so the capture habit produced a session. It was confirmed afterwards that it was meant as a thought.
+
+### Scope
+
+1. **Migration 6: `captures.session_id` becomes nullable.** SQLite cannot drop `NOT NULL` in place, so the table is rebuilt: create `captures_new` without the constraint, copy every row with its id, drop, rename. The `sqlite_sequence` high-water mark is carried across rather than reset, because it is the only record of captures that were made and later cleared.
+2. **Widget state `noting`.** The shortcut from `idle` or `finished` opens it. Placeholder `write it down`; the row reads `thought 10 25 50 tab` with *thought* active.
+3. **Tab is one ring:** thought → 25 → 50 → 10 → thought, draft kept across every step. Landing on a duration is `starting`, unchanged, placeholder `first small step`. Enter on a duration starts a session as today.
+4. **Widget state `noted`.** Enter in `noting` inserts the capture with `session_id` NULL, shows `written down` (`zapisano`) for one second, returns focus, then goes idle. No number: the return counter means returns within a session, and a count with no session would be a new counter.
+5. **Escape** in `noting` discards the draft and returns focus. Empty Enter behaves the same.
+6. **Readers.** Review list `LEFT JOIN`s sessions and shows only the time when there is no session. Return counter and resume panel unchanged (session scoped). Captures per session counts only session captures. Returns this week and last week include session-less captures: catching a thought instead of following it is the same act either way.
+7. **Warm start** still opens `starting` with the task prefilled. It offers a session, which is a different thing from the shortcut.
+
+### Non-goals
+
+A second shortcut. Any count or reward for session-less captures. Renaming a running session. Changing anything about capture during a session.
+
+### Acceptance
+
+- [ ] Migration run against a copy of the real database and against a constructed one with rows and a gap in the ids: rows and ids preserved, NULL accepted, high-water mark kept.
+- [ ] Every reducer transition exercised: Tab round the full ring and back to thought with the draft intact; Enter and Escape from `noting` and `starting`; shortcut from `idle`, `finished`, `running`; warm start.
+- [ ] Installed build: shortcut with no session, type, Enter. Row in SQLite with `session_id` NULL, focus back in the previous app without a click, `written down` shown for a second.
+- [ ] Round trip still under 3 seconds.
+- [ ] A capture during a session still shows `return N`.
+- [ ] `pnpm tsc --noEmit`, `cargo check`, `cargo test` clean. CI green on both platforms.
+
+---
+
 ## Definition of done for v1
 
 Capture round-trip under three seconds, and the app used for one full working day without the main window being opened mid-session.

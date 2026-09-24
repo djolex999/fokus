@@ -106,13 +106,6 @@ body {
   font-size: 11.5px;
 }
 
-/* Names the mode. Carries slightly more weight than the numbers beside it,
-   because it answers the question you have before you have any other. */
-.mode {
-  color: var(--muted);
-  margin-right: 3px;
-}
-
 .duration {
   color: var(--dim);
   font-variant-numeric: tabular-nums;

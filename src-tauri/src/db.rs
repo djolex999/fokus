@@ -64,5 +64,40 @@ pub fn migrations() -> Vec<Migration> {
                   DELETE FROM sessions WHERE task = '__seed__';",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            // A thought can now be written down with no session running, so
+            // `session_id` loses NOT NULL. SQLite cannot drop a constraint in
+            // place, so the table is rebuilt and every row copied with its id.
+            //
+            // A plain rebuild also resets the AUTOINCREMENT high-water mark to
+            // the largest surviving id, and that mark is the only record of
+            // captures that were made and later cleared (76 of them, found this
+            // way on 2026-09-16). So it is carried across before the swap: set
+            // on the new table's row if the copy created one, inserted if the
+            // old table was empty but used. A never-used table has no mark and
+            // gets none. Checked against a copy of the real database and three
+            // constructed ones before it was committed.
+            description: "captures can exist without a session",
+            sql: "CREATE TABLE captures_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER REFERENCES sessions(id),
+                    text TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    resolved TEXT CHECK (resolved IN ('done','scheduled','deleted'))
+                  );
+                  INSERT INTO captures_new (id, session_id, text, created_at, resolved)
+                    SELECT id, session_id, text, created_at, resolved FROM captures;
+                  UPDATE sqlite_sequence
+                     SET seq = (SELECT seq FROM sqlite_sequence WHERE name = 'captures')
+                   WHERE name = 'captures_new';
+                  INSERT INTO sqlite_sequence (name, seq)
+                    SELECT 'captures_new', seq FROM sqlite_sequence
+                     WHERE name = 'captures'
+                       AND NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'captures_new');
+                  DROP TABLE captures;
+                  ALTER TABLE captures_new RENAME TO captures;",
+            kind: MigrationKind::Up,
+        },
     ]
 }
