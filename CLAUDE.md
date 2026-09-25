@@ -114,7 +114,7 @@ Never use em dashes in UI copy or in text written for the user to publish (posts
 
 ## Working agreement
 
-- Releases: the tag message is the release note, written for users. The release workflow publishes a draft with an empty body; before publishing, check it was built from the tagged commit with all six installers attached, then copy the tag message in with paragraphs unwrapped.
+- Releases: the tag message is the release note, written for users. The release workflow publishes a draft with an empty body; before publishing, check it was built from the tagged commit with all six installers attached, then copy the tag message in with paragraphs unwrapped. After publishing, confirm the Pages build is for the pushed commit (`gh api repos/djolex999/fokus/pages/builds/latest`); it once silently never started, and `POST` to the same endpoint rebuilds.
 - Work session by session per `PLAN.md`. Do not start a later session's work early, even if it seems trivial.
 - Each session ends with a working, runnable app. If it does not run, the session is not done.
 - Run `pnpm tsc --noEmit` and `cargo check` before declaring a session complete.

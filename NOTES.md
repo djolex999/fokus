@@ -1024,3 +1024,21 @@ Not verified by Claude: the shortcut in the installed build, end to end. Access
 to drive the app was declined, and saving a test thought would have put a row
 into the database the experiment is counting. The first real thought is the
 test.
+
+## A successful deploy is not the same as a deploy of this commit
+
+2026-09-25. After v0.1.7 was pushed, the landing page still read v0.1.6. The
+latest Pages run was green, but it was the run for the previous commit; GitHub
+had not started one for the new push at all. A check of "latest run succeeded"
+passes in exactly this case. Check which commit the Pages build is for
+(`gh api repos/<owner>/<repo>/pages/builds/latest`), and if it is behind, a
+`POST` to the same endpoint rebuilds from master.
+
+## "It worked" is a report; the row is the result
+
+2026-09-24. The hand test of capture anywhere came back as "it worked", and
+`sqlite_sequence` said no capture had been written. The test had ended in
+Escape, which exercises the shortcut and the Tab ring and never the save. A
+second "done" also left no row. The release waited a day for a real thought,
+capture 77, read back with no session attached. Acceptance for anything that
+writes is the written thing, checked, not a description of the screen.
