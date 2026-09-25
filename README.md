@@ -13,13 +13,15 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 **Sessions.** A task and 10, 25 or 50 minutes. The countdown is derived from the wall clock, so it survives sleep. Ending early is recorded as `abandoned` and is treated as data, never as failure — there is no red X anywhere in this app.
 
-**Capture.** The shortcut opens a one-line input whether or not a session is running. Enter saves it and hands focus back. In a session you see `return 3` for a second, outside one `written down`, then nothing. With no session running, Tab turns the same input into a session start: thought, then 25, 50 and 10 minutes.
+**Capture.** The shortcut opens a one-line input whether or not a session is running. Enter saves it and hands focus back. In a session you see `return 3` for a second, outside one `written down`, then nothing. With no session running, Tab turns the same input into a session start: thought, then 25, 50 and 10 minutes. During a session, Tab switches to the task name instead, so a typo can be fixed without ending the session.
 
 **Review.** Everything you wrote down, triaged as *done*, *schedule* or *delete*.
 
 **Come back.** Away for five minutes or more and the widget shows your task plus the last three things you captured, so you can pick up the thread without opening anything.
 
 **Sound.** Drop audio files in `~/fokus/audio` (the tray's *Open music folder* creates it and opens it) and the first one plays, looped, for the duration of a session. There are no controls: a `♪` at half opacity tells you it is playing, and that is the entire interface.
+
+**Backups.** Once a day, and right before *clear history*, a complete copy of the database goes to `~/fokus/backups`. The last 14 daily copies are kept. Nothing to set up and nothing on screen; the tray's *Open backups folder* shows them. To restore, quit fokus and copy one over `fokus.db` in the app's data folder.
 
 **Evidence.** The WHO ASRS v1.1 screener, plus statistics over your sessions, printable as a single page to take to a doctor.
 

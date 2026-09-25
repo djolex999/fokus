@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { MINIMUM_SESSIONS, computeStats } from '../types/stats'
 import type { Stats as StatsData } from '../types/stats'
 import { emit } from '@tauri-apps/api/event'
-import { allCaptureTimes, allSessions, clearAllSessions } from '../lib/db'
+import { allCaptureTimes, allSessions } from '../lib/db'
+import { clearWithBackup } from '../lib/backup'
 import { failure } from '../lib/ipc'
 import { fill, sessionsWord, t } from '../lib/i18n'
 import { formatDate } from './format'
@@ -72,7 +73,7 @@ function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.E
 
   const clear = useCallback(async (): Promise<void> => {
     try {
-      await clearAllSessions()
+      await clearWithBackup()
       setConfirming(false)
       await onCleared()
       // The review list is reading the same captures.

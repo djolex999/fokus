@@ -259,6 +259,23 @@ export async function resolveCapture(id: number, resolution: Resolution): Promis
   await conn.execute('UPDATE captures SET resolved = $1 WHERE id = $2', [resolution, id])
 }
 
+/** A running session's task, corrected. Only the name changes: the timer runs
+ *  from `started_at`, which is not touched. */
+export async function renameSession(sessionId: number, task: string): Promise<void> {
+  const conn = await db()
+  await conn.execute('UPDATE sessions SET task = $1 WHERE id = $2', [task, sessionId])
+}
+
+/**
+ * A complete, consistent copy of the database at `path`, written by SQLite on
+ * this connection. Refuses a path that already exists, so it cannot overwrite
+ * an earlier backup.
+ */
+export async function vacuumInto(path: string): Promise<void> {
+  const conn = await db()
+  await conn.execute('VACUUM INTO $1', [path])
+}
+
 // --- ASRS -----------------------------------------------------------------
 
 export type AsrsRecord = {

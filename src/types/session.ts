@@ -42,6 +42,9 @@ export type WidgetState =
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
+  /** Tab from capture: the task name, being corrected. `thought` holds whatever
+   *  was half typed in capture, so Tab back returns it. */
+  | { kind: 'renaming'; session: RunningSession; draft: string; thought: string }
   | { kind: 'confirmed'; session: RunningSession; returnNumber: number }
   /** Back after five minutes or more away: the task, and the last three things
    *  captured, so the thread can be picked up without opening anything. */
@@ -58,6 +61,7 @@ export type WidgetAction =
   /** Tab: thought, then each duration, then back to thought. */
   | { type: 'cycle' }
   | { type: 'noteSaved' }
+  | { type: 'renamed'; task: string }
   | { type: 'sessionStarted'; session: RunningSession }
   | { type: 'captureConfirmed'; returnNumber: number }
   | { type: 'captureDismissed' }
@@ -70,6 +74,7 @@ export function sessionOf(state: WidgetState): RunningSession | null {
   switch (state.kind) {
     case 'running':
     case 'capturing':
+    case 'renaming':
     case 'confirmed':
     case 'resumed':
       return state.session
@@ -118,6 +123,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         case 'noting':
         case 'starting':
         case 'capturing':
+        case 'renaming':
           return state
       }
       break
@@ -125,6 +131,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       if (state.kind === 'noting') return { ...state, draft: action.draft }
       if (state.kind === 'starting') return { ...state, draft: action.draft }
       if (state.kind === 'capturing') return { ...state, draft: action.draft }
+      if (state.kind === 'renaming') return { ...state, draft: action.draft }
       // The resume panel clears on the first keystroke, and that keystroke is
       // kept rather than swallowed.
       if (state.kind === 'resumed') {
@@ -132,6 +139,27 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       }
       return state
     case 'cycle': {
+      // In a session, Tab swaps what Enter does: write a thought down, or
+      // correct the task name.
+      if (state.kind === 'capturing') {
+        return {
+          kind: 'renaming',
+          session: state.session,
+          draft: state.session.task,
+          thought: state.draft,
+        }
+      }
+      if (state.kind === 'resumed') {
+        return {
+          kind: 'renaming',
+          session: state.session,
+          draft: state.session.task,
+          thought: '',
+        }
+      }
+      if (state.kind === 'renaming') {
+        return { kind: 'capturing', session: state.session, draft: state.thought }
+      }
       if (state.kind === 'noting') {
         return { kind: 'starting', draft: state.draft, plannedMin: DEFAULT_DURATION }
       }
@@ -143,6 +171,10 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
     }
     case 'noteSaved':
       return state.kind === 'noting' ? { kind: 'noted' } : state
+    case 'renamed':
+      return state.kind === 'renaming'
+        ? { kind: 'running', session: { ...state.session, task: action.task } }
+        : state
     case 'resume':
       return state.kind === 'running'
         ? { kind: 'resumed', session: state.session, recent: action.recent }
@@ -161,6 +193,8 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
           return { kind: 'running', session: touched }
         case 'capturing':
           return { kind: 'capturing', session: touched, draft: state.draft }
+        case 'renaming':
+          return { ...state, session: touched }
         case 'confirmed':
           return { kind: 'confirmed', session: touched, returnNumber: state.returnNumber }
         case 'resumed':

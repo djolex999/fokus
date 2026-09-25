@@ -40,9 +40,21 @@ export async function setMenuLabels(labels: {
   musicSilence: string
   musicPlay: string
   musicFolder: string
+  backupsFolder: string
   quit: string
 }): Promise<void> {
   await invoke('set_menu_labels', labels)
+}
+
+/** Where `fileName` would go in ~/fokus/backups, or null if it already exists.
+ *  Rust validates the name and builds the path. */
+export async function backupTarget(fileName: string): Promise<string | null> {
+  return invoke<string | null>('backup_target', { fileName })
+}
+
+/** Deletes all but the newest daily backups. Returns how many went. */
+export async function pruneBackups(): Promise<number> {
+  return invoke<number>('prune_backups')
 }
 
 /** Sound returns for every new session, so the tray's tick returns with it. */

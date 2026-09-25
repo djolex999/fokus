@@ -80,6 +80,8 @@ CREATE TABLE asrs (
 
 All timestamps ISO 8601 UTC strings. Convert to local only for display.
 
+Backups: `VACUUM INTO ~/fokus/backups/fokus-YYYY-MM-DD.db` once a day, newest 14 kept, plus `fokus-before-clear-*.db` before every clear, never pruned. Clear history does not run if its backup fails.
+
 **Return count is derived**, never stored: `COUNT(captures)` per session or per week. A separate counter column is duplicate state that can drift, and a temptation to "correct" later.
 A capture with no session counts toward the week, never toward a session, and is acknowledged without a number.
 
@@ -95,12 +97,13 @@ type WidgetState =
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
+  | { kind: 'renaming'; session: RunningSession; draft: string; thought: string }  // Tab from capture
   | { kind: 'confirmed'; session: RunningSession; returnNumber: number }  // clears after 1s
   | { kind: 'resumed'; session: RunningSession; recent: string[] }       // clears on next input
   | { kind: 'finished'; task: string };
 ```
 
-With no session running, the shortcut means capture. Tab cycles thought → 25 → 50 → 10 → thought.
+With no session running, the shortcut means capture. Tab cycles thought → 25 → 50 → 10 → thought. During a session, Tab swaps capture and renaming the task.
 
 ## Copy
 

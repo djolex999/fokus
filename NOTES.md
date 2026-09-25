@@ -1042,3 +1042,59 @@ Escape, which exercises the shortcut and the Tab ring and never the save. A
 second "done" also left no row. The release waited a day for a real thought,
 capture 77, read back with no session attached. Acceptance for anything that
 writes is the written thing, checked, not a description of the screen.
+
+## Session 6: backups and renaming
+
+2026-09-25.
+
+### Backups are automatic because the person who needs them will not press a button
+
+Once a day on launch, and hourly after in case the app stays open, the webview
+writes `~/fokus/backups/fokus-YYYY-MM-DD.db` with `VACUUM INTO` on its own
+connection, then Rust prunes to the newest 14. A manual button was the
+alternative and was turned down: a backup that depends on remembering to take
+it fails exactly the person this app is built for.
+
+`VACUUM INTO` was chosen over copying the file because the live database is in
+WAL mode, and a file copy of `fokus.db` alone misses whatever is still in the
+log. It was checked with a bound path before being relied on: it works, the
+copy passes an integrity check and even carries the AUTOINCREMENT mark, and it
+refuses to write over an existing file, which is a second guard against
+clobbering an earlier backup.
+
+Rust stays scaffolding. It creates the folder, answers "does this file exist",
+and prunes. File names crossing the IPC boundary are checked against the two
+shapes fokus writes, and the path is built on the Rust side, so a name cannot
+reach outside the folder. Pruning only ever touches daily files.
+
+Silent means a backup that keeps failing does not say so. That is the cost of
+zero notifications, accepted knowingly; failures go to the log, and *Open
+backups folder* in the tray is where a missing day would be seen.
+
+### Clear history now costs nothing to undo
+
+`clearWithBackup` writes `fokus-before-clear-YYYY-MM-DD-HHMM.db` first, and if
+that cannot be written, nothing is cleared and the error shows where the user
+just clicked. These copies are never pruned. One mistake caught while writing
+it: the first version reused a same-minute copy on a second clear, on the
+reasoning that nothing could have changed. Something captured between the two
+clears would have been deleted with no copy. A second clear inside the same
+minute is now refused.
+
+Tested by running the real `backup.ts` against stand-ins for the database and
+IPC that fail on command: copy fails, folder unavailable, same-minute copy
+exists. In all three nothing was cleared. On the installed build, today's copy
+appeared at launch without any interaction and read back clean: 23 sessions,
+capture 77, migrations 1 to 6.
+
+### Renaming is Tab from capture
+
+During a session, Tab in the capture box switches to the task name, prefilled
+and selected; Enter saves it, Escape cancels, Tab goes back. A half typed
+thought is held in the `renaming` state and comes back with Tab, so fixing a
+typo mid thought loses nothing. The capture row shows a `tab` hint, because a
+key that does something new and says nothing about it is not a feature. Same
+idea as idle: Tab changes what Enter does.
+
+The restart detection in `classifyEnding` stays. It still reads sessions 35 and
+42 correctly, and anyone on an older version will keep producing them.

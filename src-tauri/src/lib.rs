@@ -1,3 +1,4 @@
+mod backup;
 mod db;
 mod focus;
 mod window_pos;
@@ -38,6 +39,7 @@ struct TrayItems {
     abandon: MenuItem<tauri::Wry>,
     music: MenuItem<tauri::Wry>,
     music_folder: MenuItem<tauri::Wry>,
+    backups_folder: MenuItem<tauri::Wry>,
     /// (silence, play). Replaced by the widget once it knows the language.
     music_labels: Mutex<(String, String)>,
     quit: MenuItem<tauri::Wry>,
@@ -134,13 +136,25 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // that sound was possible at all.
     let music_folder =
         MenuItem::with_id(app, "music_folder", "Otvori folder s muzikom", true, None::<&str>)?;
+    // Backups are automatic and silent, so this is the only place they surface.
+    let backups_folder = MenuItem::with_id(
+        app,
+        "backups_folder",
+        "Otvori folder s kopijama",
+        true,
+        None::<&str>,
+    )?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &abandon, &music, &music_folder, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[&open, &abandon, &music, &music_folder, &backups_folder, &quit],
+    )?;
     app.manage(TrayItems {
         open: open.clone(),
         abandon: abandon.clone(),
         music: music.clone(),
         music_folder: music_folder.clone(),
+        backups_folder: backups_folder.clone(),
         music_labels: Mutex::new(("Utišaj muziku".into(), "Pusti muziku".into())),
         quit: quit.clone(),
     });
@@ -184,8 +198,19 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             "music_folder" => {
-                if let Err(e) = open_music_folder(app) {
+                let opened = audio_dir(app)
+                    .ok_or_else(|| "no home directory".to_string())
+                    .and_then(|dir| open_folder(&dir));
+                if let Err(e) = opened {
                     eprintln!("[fokus] could not open the music folder: {e}");
+                }
+            }
+            "backups_folder" => {
+                let opened = backup::dir(app)
+                    .ok_or_else(|| "no home directory".to_string())
+                    .and_then(|dir| open_folder(&dir));
+                if let Err(e) = opened {
+                    eprintln!("[fokus] could not open the backups folder: {e}");
                 }
             }
             "abandon" => {
@@ -222,16 +247,15 @@ fn audio_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
     Some(app.path().home_dir().ok()?.join("fokus").join("audio"))
 }
 
-/// Creates ~/fokus/audio if it is missing, then shows it in the system file
-/// manager. Created rather than reported missing: the person clicking this wants
-/// somewhere to drop a file, and an error saying there is nowhere is the least
-/// useful answer available.
+/// Creates a folder under ~/fokus if it is missing, then shows it in the system
+/// file manager. Created rather than reported missing: the person clicking wants
+/// somewhere to look or to drop a file, and an error saying there is nowhere is
+/// the least useful answer available.
 ///
 /// The platform's own opener through `Command` rather than a plugin. Three lines
 /// per platform do not justify a dependency.
-fn open_music_folder(app: &AppHandle) -> Result<(), String> {
-    let dir = audio_dir(app).ok_or("no home directory")?;
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+fn open_folder(dir: &std::path::Path) -> Result<(), String> {
+    std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
 
     #[cfg(target_os = "macos")]
     let opener = "open";
@@ -243,7 +267,7 @@ fn open_music_folder(app: &AppHandle) -> Result<(), String> {
     // Spawned, not waited on: explorer.exe exits with 1 even when it succeeds,
     // so its status says nothing, and the menu must not block on a window.
     std::process::Command::new(opener)
-        .arg(&dir)
+        .arg(dir)
         .spawn()
         .map(|_| ())
         .map_err(|e| format!("{opener}: {e}"))
@@ -309,12 +333,14 @@ fn set_menu_labels(
     music_silence: String,
     music_play: String,
     music_folder: String,
+    backups_folder: String,
     quit: String,
 ) -> Result<(), String> {
     let items = app.state::<TrayItems>();
     items.open.set_text(open).map_err(|e| e.to_string())?;
     items.abandon.set_text(abandon).map_err(|e| e.to_string())?;
     items.music_folder.set_text(music_folder).map_err(|e| e.to_string())?;
+    items.backups_folder.set_text(backups_folder).map_err(|e| e.to_string())?;
     items.quit.set_text(quit).map_err(|e| e.to_string())?;
 
     // Whichever label is showing depends on whether the music is currently on,
@@ -449,7 +475,9 @@ pub fn run() {
             set_menu_labels,
             shortcut_label,
             audio_track,
-            set_widget_height
+            set_widget_height,
+            backup::backup_target,
+            backup::prune_backups
         ])
         .setup(|app| {
             // A normal application, on purpose. The widget window carries

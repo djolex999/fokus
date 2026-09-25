@@ -157,6 +157,39 @@ A second shortcut. Any count or reward for session-less captures. Renaming a run
 
 ---
 
+## Session 6 — backups and renaming
+
+Added 2026-09-25, after v0.1.7.
+
+**Goal:** nothing written down can be lost to a single click, and a typo in a task name no longer costs a session.
+
+**Evidence.** The clear-history button once removed 76 captures with nothing to restore them from; the only backups since are three taken by hand before risky changes. Two of 23 sessions (35 and 42) were ended within 95 seconds only to fix the task name, and the statistics had to learn to detect the restart.
+
+### Scope
+
+1. **Daily backup, automatic and silent.** On widget start and hourly after, if `~/fokus/backups/fokus-YYYY-MM-DD.db` (local date) is missing, the webview writes it with `VACUUM INTO`. The newest 14 daily files are kept; older ones are deleted. No UI.
+2. **Backup before clear.** `clearAllSessions` first writes `fokus-before-clear-YYYY-MM-DD-HHMM.db`. If that fails, nothing is cleared and the error shows in the main window. These files are never pruned.
+3. **Rust is scaffolding only:** create the folder, return a target path if the file does not exist, prune to 14. File names from the webview are validated to a strict pattern; paths are built in Rust.
+4. **Tray: Open backups folder**, sharing the folder-opening code with Open music folder.
+5. **Widget state `renaming`.** During a session, Tab in the capture box switches to the task name, prefilled and selected. Enter saves it (`UPDATE sessions SET task`), timer untouched. Escape cancels. Tab returns to capture with any half-typed thought intact, held in the `renaming` state.
+6. **Capture row shows a `tab` hint** so renaming is findable.
+
+### Non-goals
+
+Restore from backup inside the app (a backup is a file; restoring is replacing the file). Backup to anywhere but `~/fokus/backups`. Any setting for frequency or retention. Renaming a finished session.
+
+### Acceptance
+
+- [ ] Rust tests: pruning keeps the newest 14 daily files, never touches before-clear files, rejects file names outside the pattern.
+- [ ] `VACUUM INTO` produces an openable, integrity-clean copy of a copy of the real database.
+- [ ] Installed build: today's backup appears in `~/fokus/backups` on launch without any interaction.
+- [ ] Clear history with the backup made to fail: nothing is cleared.
+- [ ] Reducer: capture → Tab → renaming (task prefilled) → Tab → capture with the thought intact; Enter and Escape from renaming.
+- [ ] Hand test: rename during a session, name changed in SQLite, timer unchanged.
+- [ ] `pnpm tsc --noEmit`, `cargo check`, `cargo test` clean. CI green on both platforms.
+
+---
+
 ## Definition of done for v1
 
 Capture round-trip under three seconds, and the app used for one full working day without the main window being opened mid-session.

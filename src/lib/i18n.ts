@@ -38,6 +38,8 @@ type Strings = {
   thought: string
   /** Shown for a second after a thought saved outside a session. */
   noted: string
+  /** Label while the running session's task is being corrected. */
+  rename: string
   /** Beside the countdown: the wall clock time the session ends. */
   endsAt: string
   durationHint: string
@@ -114,6 +116,7 @@ type Strings = {
   trayMusicSilence: string
   trayMusicPlay: string
   trayMusicFolder: string
+  trayBackupsFolder: string
   trayQuit: string
 }
 
@@ -122,6 +125,7 @@ const sr: Strings = {
   capturePlaceholder: 'zapiši misao',
   thought: 'misao',
   noted: 'zapisano',
+  rename: 'preimenuj',
   endsAt: 'do {time}',
   durationHint: 'tab',
   returnCount: '{n}. povratak',
@@ -182,6 +186,7 @@ const sr: Strings = {
   trayMusicSilence: 'Utišaj muziku',
   trayMusicPlay: 'Pusti muziku',
   trayMusicFolder: 'Otvori folder s muzikom',
+  trayBackupsFolder: 'Otvori folder s kopijama',
   trayQuit: 'Izađi',
 }
 
@@ -190,6 +195,7 @@ const en: Strings = {
   capturePlaceholder: 'write it down',
   thought: 'thought',
   noted: 'written down',
+  rename: 'rename',
   endsAt: 'until {time}',
   durationHint: 'tab',
   returnCount: 'return {n}',
@@ -251,6 +257,7 @@ const en: Strings = {
   trayMusicSilence: 'Silence music',
   trayMusicPlay: 'Play music',
   trayMusicFolder: 'Open music folder',
+  trayBackupsFolder: 'Open backups folder',
   trayQuit: 'Quit',
 }
 

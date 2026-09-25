@@ -23,12 +23,14 @@ import {
   lastAbandonedSession,
   openDatabase,
   recentCaptureTexts,
+  renameSession,
   closeAbandoned,
   openSessions,
   startSession,
   touchSession,
 } from '../lib/db'
 import { fill, t } from '../lib/i18n'
+import { BACKUP_CHECK_MS, backupIfDue } from '../lib/backup'
 import {
   audioTrack,
   describeError,
@@ -241,10 +243,14 @@ export function CaptureWidget(): JSX.Element {
         musicSilence: t.trayMusicSilence,
         musicPlay: t.trayMusicPlay,
         musicFolder: t.trayMusicFolder,
+        backupsFolder: t.trayBackupsFolder,
         quit: t.trayQuit,
       }).catch((e: unknown) => report(`could not set menu labels: ${describeError(e)}`))
 
       await openDatabase()
+      // Before anything else touches the data today. Not awaited: a slow copy
+      // must not hold up the widget, and it reports its own failures.
+      void backupIfDue()
 
       // A session outlives the process that was timing it. Quitting at minute
       // six of twenty five and reopening should hand the session back, not
@@ -281,6 +287,13 @@ export function CaptureWidget(): JSX.Element {
     }
     prepare().catch((e: unknown) => setError(failure(t.errDatabase, e)))
   }, [startAudio])
+
+  // The app can stay open for days, so today's copy is checked for hourly
+  // rather than only at launch. Cheap when it exists: one stat in Rust.
+  useEffect(() => {
+    const timer = window.setInterval(() => void backupIfDue(), BACKUP_CHECK_MS)
+    return () => window.clearInterval(timer)
+  }, [])
 
   // --- session lifecycle -------------------------------------------------
 
@@ -435,6 +448,7 @@ export function CaptureWidget(): JSX.Element {
       state.kind !== 'capturing' &&
       state.kind !== 'starting' &&
       state.kind !== 'noting' &&
+      state.kind !== 'renaming' &&
       state.kind !== 'resumed'
     ) {
       return
@@ -442,10 +456,14 @@ export function CaptureWidget(): JSX.Element {
     const input = inputRef.current
     if (input === null) return
     input.focus()
-    const withinRing =
-      (previous === 'noting' || previous === 'starting') &&
-      (state.kind === 'noting' || state.kind === 'starting')
-    if (!withinRing) input.select()
+    // Carried over, so left as typed: the draft moving round the idle ring,
+    // and a half typed thought coming back from renaming. Entering renaming
+    // does select, since the task name is there to be replaced or corrected.
+    const carried =
+      ((previous === 'noting' || previous === 'starting') &&
+        (state.kind === 'noting' || state.kind === 'starting')) ||
+      (previous === 'renaming' && state.kind === 'capturing')
+    if (!carried) input.select()
     void mark('input focused')
   }, [state.kind, focusTick])
 
@@ -522,6 +540,31 @@ export function CaptureWidget(): JSX.Element {
     [returnFocus],
   )
 
+  /** The task name, corrected mid session. Unchanged or empty is a cancel. */
+  const commitRename = useCallback(
+    async (session: RunningSession, draft: string): Promise<void> => {
+      const task = draft.trim()
+      if (task === '' || task === session.task) {
+        dispatch({ type: 'captureDismissed' })
+        await returnFocus()
+        return
+      }
+      try {
+        await renameSession(session.id, task)
+      } catch (e: unknown) {
+        // The new name stays in the input rather than vanishing.
+        setError(failure(t.errNotSaved, e))
+        return
+      }
+      dispatch({ type: 'renamed', task })
+      await returnFocus()
+      void touch(session.id)
+      // The review list shows the task beside each capture.
+      void emit(CAPTURES_CHANGED_EVENT)
+    },
+    [returnFocus, touch],
+  )
+
   const commitCapture = useCallback(
     async (session: RunningSession, draft: string): Promise<void> => {
       const text = draft.trim()
@@ -560,7 +603,14 @@ export function CaptureWidget(): JSX.Element {
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>): void => {
       const current = stateRef.current
-      if (event.key === 'Tab' && (current.kind === 'starting' || current.kind === 'noting')) {
+      if (
+        event.key === 'Tab' &&
+        (current.kind === 'starting' ||
+          current.kind === 'noting' ||
+          current.kind === 'capturing' ||
+          current.kind === 'renaming' ||
+          current.kind === 'resumed')
+      ) {
         event.preventDefault()
         dispatch({ type: 'cycle' })
         return
@@ -570,6 +620,10 @@ export function CaptureWidget(): JSX.Element {
         if (current.kind === 'noting') {
           void mark('enter pressed')
           void commitNote(current.draft)
+          return
+        }
+        if (current.kind === 'renaming') {
+          void commitRename(current.session, current.draft)
           return
         }
         if (current.kind === 'starting') {
@@ -594,13 +648,17 @@ export function CaptureWidget(): JSX.Element {
         event.preventDefault()
         if (current.kind === 'starting' || current.kind === 'noting') {
           dispatch({ type: 'dismiss' })
-        } else if (current.kind === 'capturing' || current.kind === 'resumed') {
+        } else if (
+          current.kind === 'capturing' ||
+          current.kind === 'renaming' ||
+          current.kind === 'resumed'
+        ) {
           dispatch({ type: 'captureDismissed' })
         }
         void returnFocus()
       }
     },
-    [beginSession, commitCapture, commitNote, returnFocus, startAudio],
+    [beginSession, commitCapture, commitNote, commitRename, returnFocus, startAudio],
   )
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
@@ -746,8 +804,30 @@ function renderBody(
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          <div className="secondary" data-tauri-drag-region>
-            {state.session.task}
+          {/* Tab renames the task; the hint is how that is found. */}
+          <div className="task-row" data-tauri-drag-region>
+            <span className="secondary">{state.session.task}</span>
+            <span className="shortcut-hint">{t.durationHint}</span>
+          </div>
+        </>
+      )
+
+    case 'renaming':
+      return (
+        <>
+          <input
+            ref={inputRef}
+            className="capture-input"
+            type="text"
+            value={state.draft}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+          <div className="durations" data-tauri-drag-region>
+            <span className="duration active">{t.rename}</span>
+            <span className="duration-hint">{t.durationHint}</span>
           </div>
         </>
       )
