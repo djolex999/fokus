@@ -38,7 +38,7 @@ export function PrintSheet({
         ) : (
           <>
             <p className="print-score">
-              {asrs.part_a_score} od 6 &middot; {formatDate(asrs.taken_at)}
+              {asrs.part_a_score} {t.outOfSix} &middot; {formatDate(asrs.taken_at)}
             </p>
             <p>{fill(t.printShaded, { n: asrs.part_a_score })}</p>
             {/* The translation caveat belongs only where a translation was used. */}

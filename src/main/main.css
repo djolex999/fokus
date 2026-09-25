@@ -541,7 +541,12 @@ body {
     padding-bottom: 4pt;
   }
 
+  /* The headline numbers. Their screen colour is --fg, near white for the dark
+     theme. It printed as pale grey only because the engine darkens light text
+     when it is dropping backgrounds; once backgrounds print exactly, so does
+     this, and it came out white on white. Every colour on paper is set here. */
   .print-sheet .figure {
+    color: #000;
     font-size: 11pt;
   }
 
@@ -551,6 +556,16 @@ body {
   .print-sheet .hour-label {
     color: #333;
     font-size: 8.5pt;
+  }
+
+  /* Every mark on this page is a background colour, and print engines drop
+     backgrounds unless told otherwise. Without this the bars, the time of day
+     chart and the legend chips printed as nothing, leaving labels beside empty
+     space. Missed in Session 4 because the layout was measured in a browser,
+     where background printing can be on. Inherited, so the sheet is enough. */
+  .print-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .print-sheet .bar-track {

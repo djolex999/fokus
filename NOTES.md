@@ -1098,3 +1098,55 @@ idea as idle: Tab changes what Enter does.
 
 The restart detection in `classifyEnding` stays. It still reads sessions 35 and
 42 correctly, and anyone on an older version will keep producing them.
+
+## Print for your doctor did nothing, and three bugs stood behind it
+
+2026-09-25. Reported by the user: the print button did nothing. Session 4's own
+notes said the print dialog had "not been exercised by hand"; the layout had
+been measured in a browser. It had been broken since it shipped.
+
+**One: `window.print()` is a no-op on macOS.** WebKit hands a script's print
+request to a UI delegate hook, and wry does not implement it, so the call is
+dropped with no error. Tauri's doc comment says `window.print()` "works on all
+platforms", which is how the button was written. Confirmed in the sources on
+disk rather than from memory: wry's macOS `print()` builds a native
+`NSPrintOperation`, and on Windows its `print()` is just `window.print()`
+evaluated in the page. So `print_page` in Rust calls `WebviewWindow::print()`
+on every platform, one path, and the main window now shows an error where the
+button was pressed instead of failing silently.
+
+The native path sets the printer margins to 0. The stylesheet's
+`@page { margin: 14mm }` turned out to be honoured, but that was checked in the
+printed PDF, not assumed.
+
+**Two: the charts printed as nothing.** Every bar and legend chip is a
+background colour, print engines drop backgrounds by default, and nothing set
+`print-color-adjust`. The labels and percentages printed beside empty space.
+Invisible in Session 4 because a browser's print preview can have background
+graphics switched on. `print-color-adjust: exact` on the sheet.
+
+**Three: "6 od 6" on an English page.** The printed score had `od` typed into
+the JSX, beside an existing `outOfSix` string that the on-screen result already
+used. The same class of bug as the ASRS answer buttons in `c08fbc5`.
+
+**Four, caused by the fix for two.** With backgrounds printing exactly, the
+headline figures went nearly invisible. Their screen colour is `--fg`, near
+white for the dark theme, and the print stylesheet never overrode it. They had
+printed pale grey only because WebKit darkens light text when it is dropping
+backgrounds; `exact` switches that adjustment off. The legend chips had the
+same bug in Session 4 and were fixed then; `.figure` was missed. Every colour
+on the sheet is now set in the print rules.
+
+### How it was verified
+
+Each round was checked in a real PDF saved from the installed build's own print
+dialog, rendered to an image and looked at: the dialog opening, one page,
+14mm margins, the charts present, the score in English, the figures legible.
+Four rounds, because each fix exposed the next problem. A first attempt to
+measure margins by scanning for ink reported 0mm on every side; the render had
+a transparent background that the script read as black. Looking at the page
+settled it.
+
+The lesson is the one from the "it worked" entry, applied to output: the
+artifact is the test. A browser print preview of the same CSS would have passed
+all four of these.

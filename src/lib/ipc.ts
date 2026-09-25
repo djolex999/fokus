@@ -71,8 +71,10 @@ export async function setWidgetHeight(height: number): Promise<void> {
 /** Browser print to PDF is the entire export mechanism. A PDF library would be
  *  a dependency bought for one button. The JS API has no print binding in this
  *  version, so this is the webview's own, which WKWebView honours. */
-export function printPage(): void {
-  window.print()
+/** The system print dialog, opened natively. See `print_page` in Rust for why
+ *  this is not `window.print()`. */
+export async function printPage(): Promise<void> {
+  await invoke('print_page')
 }
 
 /** Used only by the tray quit path, after any in flight session is closed out. */

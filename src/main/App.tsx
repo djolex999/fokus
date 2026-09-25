@@ -3,7 +3,7 @@ import { computeStats } from '../types/stats'
 import type { Stats as StatsData } from '../types/stats'
 import { allCaptureTimes, allSessions, asrsHistory } from '../lib/db'
 import type { AsrsRecord } from '../lib/db'
-import { describeError, printPage } from '../lib/ipc'
+import { describeError, failure, printPage } from '../lib/ipc'
 import { t } from '../lib/i18n'
 import { ReviewList } from './ReviewList'
 import { Asrs } from './Asrs'
@@ -22,6 +22,9 @@ export function App(): JSX.Element {
   const [tab, setTab] = useState<Tab>('captures')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [asrs, setAsrs] = useState<AsrsRecord | null>(null)
+  // Shown where the button was pressed. The first version failed silently on
+  // macOS for weeks, which is the failure this exists to prevent repeating.
+  const [printError, setPrintError] = useState<string | null>(null)
 
   // Loaded up front rather than on the button, so the print action prints
   // what is already on screen instead of opening a print dialog over a blank page.
@@ -61,12 +64,16 @@ export function App(): JSX.Element {
             type="button"
             className="tab print-action"
             onClick={() => {
-              void loadSheet().then(() => printPage())
+              setPrintError(null)
+              loadSheet()
+                .then(() => printPage())
+                .catch((e: unknown) => setPrintError(failure(t.errNotPrinted, e)))
             }}
           >
             {t.printAction}
           </button>
         </nav>
+        {printError !== null && <p className="error">{printError}</p>}
 
         {tab === 'captures' && <ReviewList />}
         {tab === 'questionnaire' && <Asrs />}

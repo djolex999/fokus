@@ -367,6 +367,19 @@ fn reset_music(app: AppHandle, state: State<'_, FokusState>) -> Result<(), Strin
         .map_err(|e| format!("could not update the music item: {e}"))
 }
 
+/// Opens the system print dialog for the window that asked.
+///
+/// Native rather than `window.print()`, which does nothing on macOS: WebKit
+/// hands a script's print request to a UI delegate hook that wry does not
+/// implement, so the call is dropped without an error. Tauri's own doc comment
+/// says `window.print()` works everywhere, which is how the button shipped
+/// untested and silent. On Windows this same call runs `window.print()` in the
+/// webview, so one path serves both.
+#[tauri::command]
+fn print_page(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.print().map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn quit_app(app: AppHandle) {
     app.exit(0);
@@ -477,7 +490,8 @@ pub fn run() {
             audio_track,
             set_widget_height,
             backup::backup_target,
-            backup::prune_backups
+            backup::prune_backups,
+            print_page
         ])
         .setup(|app| {
             // A normal application, on purpose. The widget window carries

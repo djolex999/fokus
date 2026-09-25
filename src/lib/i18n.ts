@@ -100,6 +100,7 @@ type Strings = {
   clearConfirm: string
   clearCancel: string
   errNotDeleted: string
+  errNotPrinted: string
   // printed page
   printRange: string
   printAsrsHeading: string
@@ -173,6 +174,7 @@ const sr: Strings = {
   clearConfirm: 'obriši',
   clearCancel: 'otkaži',
   errNotDeleted: 'nije obrisano',
+  errNotPrinted: 'štampanje se nije otvorilo',
   printRange: 'do',
   printAsrsHeading: 'ASRS v1.1, deo A',
   printNoAsrs: 'Upitnik nije popunjen.',
@@ -244,6 +246,7 @@ const en: Strings = {
   clearConfirm: 'delete',
   clearCancel: 'cancel',
   errNotDeleted: 'not deleted',
+  errNotPrinted: 'printing did not open',
   printRange: 'to',
   printAsrsHeading: 'ASRS v1.1, Part A',
   printNoAsrs: 'The questionnaire has not been filled in.',
