@@ -28,6 +28,7 @@ The only reward mechanic permitted is the return counter (Session 3).
 - SQLite via `@tauri-apps/plugin-sql`. Migrations defined in Rust, run at startup.
 - No UI framework, no component library, no CSS-in-JS. Plain CSS with variables, single stylesheet per window.
 - No charting library. Bars are divs.
+- Printing goes through the `print_page` command (`WebviewWindow::print()`), never `window.print()`, which WKWebView drops silently on macOS. Every colour on the printed page is set in the `@media print` rules, which also make it print backgrounds (`print-color-adjust: exact`), so the bars print.
 - State: React `useState` / `useReducer` only. No Redux, Zustand, Jotai, React Query.
 
 Dependency budget: if a package is not required by the constraints above, do not add it. Every dependency is maintenance cost on a personal tool.
