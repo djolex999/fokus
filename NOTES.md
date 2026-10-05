@@ -1183,3 +1183,12 @@ restating its rule in the widget.
 
 Each bug was written as a failing node check before the fix. 57 checks across
 the reducer and the selection rule pass. The hand tests are in PLAN.md.
+
+## A push that carries a tag does not trigger Pages
+
+2026-10-05. v0.1.7, v0.1.8 and v0.1.9 were each pushed as `git push origin
+master --follow-tags`, and none of the three got a Pages build; each needed a
+manual `POST .../pages/builds`. v0.1.10 pushed the commit on its own, then the
+tag: Pages started building the commit by itself before the tag went up. One
+clean case, not proof, but it matches all four observations. Push the commit,
+then the tag, and keep checking which commit Pages built.
