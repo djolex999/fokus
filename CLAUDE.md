@@ -93,8 +93,9 @@ One explicit union in `src/types/session.ts`, not a set of booleans (they can ov
 ```ts
 type WidgetState =
   | { kind: 'idle' }
-  | { kind: 'noting'; draft: string }                      // shortcut, no session: a thought
-  | { kind: 'noted' }                                      // "written down", clears after 1s
+  | { kind: 'offered'; offer: Offer }                      // idle, a stopped session behind Tab
+  | { kind: 'noting'; draft: string; offer: Offer | null } // shortcut, no session: a thought
+  | { kind: 'noted'; offer: Offer | null }                 // "written down", clears after 1s
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
@@ -104,7 +105,7 @@ type WidgetState =
   | { kind: 'finished'; task: string };
 ```
 
-With no session running, the shortcut means capture. Tab cycles thought → 25 → 50 → 10 → thought. During a session, Tab swaps capture and renaming the task.
+With no session running, the shortcut means capture, including when a warm start is on offer. Tab cycles thought → 25 → 50 → 10 → thought; from an empty thought with an offer, the first Tab is the offered task and its duration. Offers expire with the warm start window. During a session, Tab swaps capture and renaming the task.
 
 ## Copy
 

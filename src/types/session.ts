@@ -31,14 +31,24 @@ export type RunningSession = {
   lastInteractionAt: string
 }
 
+/**
+ * A session stopped recently enough to offer back after a relaunch. It waits
+ * behind Tab rather than in the input: the shortcut still means a thought
+ * first, and the offer is only taken by asking for it. `expiresAt` is the stop
+ * plus the warm start window, so an app left open for days stops offering it.
+ */
+export type Offer = { task: string; plannedMin: PlannedMinutes; expiresAt: string }
+
 export type WidgetState =
   | { kind: 'idle' }
+  /** Idle, with a stopped session on offer. Shown, not focused. */
+  | { kind: 'offered'; offer: Offer }
   /** The shortcut with no session running: a thought, written down without
-   *  one. Tab moves to `starting`. */
-  | { kind: 'noting'; draft: string }
+   *  one. Tab moves to `starting`, to the offer first if there is one. */
+  | { kind: 'noting'; draft: string; offer: Offer | null }
   /** One second of "written down" after a thought saved outside a session. No
    *  number: the return counter counts returns within a session. */
-  | { kind: 'noted' }
+  | { kind: 'noted'; offer: Offer | null }
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
   | { kind: 'capturing'; session: RunningSession; draft: string }
@@ -55,7 +65,8 @@ export type WidgetState =
 export type WidgetAction =
   | { type: 'shortcut' }
   | { type: 'resume'; recent: string[] }
-  | { type: 'warmStart'; task: string; plannedMin: PlannedMinutes }
+  | { type: 'warmStart'; offer: Offer }
+  | { type: 'offerExpired' }
   | { type: 'touched'; at: string }
   | { type: 'edit'; draft: string }
   /** Tab: thought, then each duration, then back to thought. */
@@ -69,6 +80,58 @@ export type WidgetAction =
   | { type: 'sessionAbandoned' }
   | { type: 'dismiss' }
 
+/** States that show an input and take the keyboard. Leaving one for a state
+ *  without an input means focus has to be handed back explicitly, or the
+ *  widget keeps it with nothing to type into. */
+export function holdsKeyboard(state: WidgetState): boolean {
+  switch (state.kind) {
+    case 'noting':
+    case 'starting':
+    case 'capturing':
+    case 'renaming':
+    case 'resumed':
+      return true
+    case 'idle':
+    case 'offered':
+    case 'noted':
+    case 'running':
+    case 'confirmed':
+    case 'finished':
+      return false
+  }
+}
+
+/**
+ * Whether arriving in `after` from `before` should select the input's text.
+ *
+ * Select on arrival, so a prefilled task name is replaced by the first
+ * keystroke. Anything the user has already typed is carried and left alone:
+ * - the same state again (the shortcut pressed twice mid draft),
+ * - the draft moving round the idle ring,
+ * - a thought coming back from renaming, or out of a session that ended,
+ * - the first keystroke in the resume panel, which becomes the draft. Selecting
+ *   it there meant the second keystroke replaced the first.
+ * Except Tab onto an offer: that puts text in an empty input that was not
+ * typed, so it is an arrival.
+ */
+export function selectsOnFocus(before: WidgetState, after: WidgetState): boolean {
+  if (
+    before.kind === 'noting' &&
+    before.draft.trim() === '' &&
+    after.kind === 'starting' &&
+    after.draft !== ''
+  ) {
+    return true
+  }
+  const ring = (k: WidgetState['kind']): boolean => k === 'noting' || k === 'starting'
+  const carried =
+    before.kind === after.kind ||
+    (ring(before.kind) && ring(after.kind)) ||
+    ((before.kind === 'renaming' || before.kind === 'resumed') && after.kind === 'capturing') ||
+    ((before.kind === 'capturing' || before.kind === 'renaming') && after.kind === 'noting')
+  return !carried
+}
+
 /** The session the widget is currently attached to, if any. */
 export function sessionOf(state: WidgetState): RunningSession | null {
   switch (state.kind) {
@@ -79,12 +142,31 @@ export function sessionOf(state: WidgetState): RunningSession | null {
     case 'resumed':
       return state.session
     case 'idle':
+    case 'offered':
     case 'noting':
     case 'noted':
     case 'starting':
     case 'finished':
       return null
   }
+}
+
+/** The offer the widget is holding, if any. */
+export function offerOf(state: WidgetState): Offer | null {
+  switch (state.kind) {
+    case 'offered':
+      return state.offer
+    case 'noting':
+    case 'noted':
+      return state.offer
+    default:
+      return null
+  }
+}
+
+/** Back to resting: showing the offer if one is still held, otherwise idle. */
+function rest(offer: Offer | null): WidgetState {
+  return offer === null ? { kind: 'idle' } : { kind: 'offered', offer }
 }
 
 /**
@@ -110,8 +192,10 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         // a session named after the thought.
         case 'idle':
         case 'finished':
+          return { kind: 'noting', draft: '', offer: null }
+        case 'offered':
         case 'noted':
-          return { kind: 'noting', draft: '' }
+          return { kind: 'noting', draft: '', offer: state.offer }
         case 'running':
           return { kind: 'capturing', session: state.session, draft: '' }
         case 'confirmed':
@@ -161,29 +245,47 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         return { kind: 'capturing', session: state.session, draft: state.thought }
       }
       if (state.kind === 'noting') {
+        // Nothing typed and something on offer: the first Tab is the offer.
+        // Typed text means a new task, so it starts from the default instead.
+        if (state.offer !== null && state.draft.trim() === '') {
+          return { kind: 'starting', draft: state.offer.task, plannedMin: state.offer.plannedMin }
+        }
         return { kind: 'starting', draft: state.draft, plannedMin: DEFAULT_DURATION }
       }
       if (state.kind !== 'starting') return state
       const next = afterDuration(state.plannedMin)
       return next === null
-        ? { kind: 'noting', draft: state.draft }
+        ? { kind: 'noting', draft: state.draft, offer: null }
         : { ...state, plannedMin: next }
     }
     case 'noteSaved':
-      return state.kind === 'noting' ? { kind: 'noted' } : state
-    case 'renamed':
-      return state.kind === 'renaming'
-        ? { kind: 'running', session: { ...state.session, task: action.task } }
-        : state
+      return state.kind === 'noting' ? { kind: 'noted', offer: state.offer } : state
+    case 'renamed': {
+      if (state.kind !== 'renaming') return state
+      const session = { ...state.session, task: action.task }
+      // A thought half typed before Tab is still owed somewhere. Saving the
+      // name goes back to it rather than throwing it away.
+      return state.thought.trim() === ''
+        ? { kind: 'running', session }
+        : { kind: 'capturing', session, draft: state.thought }
+    }
     case 'resume':
       return state.kind === 'running'
         ? { kind: 'resumed', session: state.session, recent: action.recent }
         : state
     case 'warmStart':
       // Only ever seen on a cold start, and never allowed to interrupt anything.
-      return state.kind === 'idle'
-        ? { kind: 'starting', draft: action.task, plannedMin: action.plannedMin }
-        : state
+      return state.kind === 'idle' ? { kind: 'offered', offer: action.offer } : state
+    case 'offerExpired':
+      switch (state.kind) {
+        case 'offered':
+          return { kind: 'idle' }
+        case 'noting':
+        case 'noted':
+          return { ...state, offer: null }
+        default:
+          return state
+      }
     case 'touched': {
       const session = sessionOf(state)
       if (session === null) return state
@@ -214,18 +316,31 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       return session === null ? { kind: 'idle' } : { kind: 'running', session }
     }
     case 'sessionCompleted': {
+      // The clock ran out with a thought half typed: the session is over, the
+      // thought is not. It stays in the input as a thought with no session, so
+      // Enter still writes it down and nothing typed is lost to a timer.
+      const unsaved =
+        state.kind === 'capturing' ? state.draft : state.kind === 'renaming' ? state.thought : ''
+      if (unsaved.trim() !== '') return { kind: 'noting', draft: unsaved, offer: null }
       const session = sessionOf(state)
       return session === null ? { kind: 'idle' } : { kind: 'finished', task: session.task }
     }
     case 'sessionAbandoned':
       return { kind: 'idle' }
     case 'dismiss':
-      return state.kind === 'starting' ||
-        state.kind === 'finished' ||
-        state.kind === 'noting' ||
-        state.kind === 'noted'
-        ? { kind: 'idle' }
-        : state
+      switch (state.kind) {
+        // Escape from a thought, or the acknowledgement clearing, does not
+        // decline the offer; it goes back to being offered.
+        case 'noting':
+        case 'noted':
+          return rest(state.offer)
+        case 'starting':
+        case 'finished':
+        case 'offered':
+          return { kind: 'idle' }
+        default:
+          return state
+      }
   }
   return state
 }

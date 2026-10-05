@@ -40,6 +40,8 @@ type Strings = {
   noted: string
   /** Label while the running session's task is being corrected. */
   rename: string
+  /** Idle, with a stopped session waiting behind Tab. */
+  offerHint: string
   /** Beside the countdown: the wall clock time the session ends. */
   endsAt: string
   durationHint: string
@@ -127,6 +129,7 @@ const sr: Strings = {
   thought: 'misao',
   noted: 'zapisano',
   rename: 'preimenuj',
+  offerHint: 'tab: {task}',
   endsAt: 'do {time}',
   durationHint: 'tab',
   returnCount: '{n}. povratak',
@@ -198,6 +201,7 @@ const en: Strings = {
   thought: 'thought',
   noted: 'written down',
   rename: 'rename',
+  offerHint: 'tab: {task}',
   endsAt: 'until {time}',
   durationHint: 'tab',
   returnCount: 'return {n}',

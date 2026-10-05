@@ -7,6 +7,9 @@ import {
   DURATIONS,
   elapsedFraction,
   formatCountdown,
+  holdsKeyboard,
+  offerOf,
+  selectsOnFocus,
   formatEndTime,
   partitionOpenSessions,
   remainingSeconds,
@@ -14,7 +17,7 @@ import {
   toRunningSession,
   widgetReducer,
 } from '../types/session'
-import type { PlannedMinutes, RunningSession, WidgetState } from '../types/session'
+import type { PlannedMinutes, RunningSession, WidgetAction, WidgetState } from '../types/session'
 import {
   countCaptures,
   endSession,
@@ -282,7 +285,7 @@ export function CaptureWidget(): JSX.Element {
       // one thing this app must never do.
       const previous = await lastAbandonedSession()
       if (previous !== null) {
-        dispatch({ type: 'warmStart', task: previous.task, plannedMin: previous.plannedMin })
+        dispatch({ type: 'warmStart', offer: previous })
       }
     }
     prepare().catch((e: unknown) => setError(failure(t.errDatabase, e)))
@@ -315,9 +318,15 @@ export function CaptureWidget(): JSX.Element {
 
   const finishSession = useCallback(
     async (session: RunningSession, outcome: 'completed' | 'abandoned'): Promise<void> => {
-      dispatch(
-        outcome === 'completed' ? { type: 'sessionCompleted' } : { type: 'sessionAbandoned' },
-      )
+      const action: WidgetAction =
+        outcome === 'completed' ? { type: 'sessionCompleted' } : { type: 'sessionAbandoned' }
+      // Asked of the reducer rather than restated here: if the widget had the
+      // keyboard and the session ending leaves nothing to type into, focus goes
+      // back. A thought carried into noting keeps it, since it is being typed.
+      const before = stateRef.current
+      const strands = holdsKeyboard(before) && !holdsKeyboard(widgetReducer(before, action))
+      dispatch(action)
+      if (strands) void returnFocus()
       stopAudio()
       try {
         await endSession(session, outcome)
@@ -325,7 +334,7 @@ export function CaptureWidget(): JSX.Element {
         setError(failure(t.errSessionNotClosed, e))
       }
     },
-    [stopAudio],
+    [returnFocus, stopAudio],
   )
 
   // Records that the session is still alive, riding the tick that is already
@@ -340,6 +349,12 @@ export function CaptureWidget(): JSX.Element {
     heartbeatSession(session.id).catch((e: unknown) =>
       console.error('could not record liveness:', describeError(e)),
     )
+  }, [state, now])
+
+  // An offer is only good for the warm start window after the stop it offers.
+  useEffect(() => {
+    const offer = offerOf(state)
+    if (offer !== null && now >= Date.parse(offer.expiresAt)) dispatch({ type: 'offerExpired' })
   }, [state, now])
 
   // The countdown running out ends the session. Derived from the wall clock, so
@@ -440,32 +455,25 @@ export function CaptureWidget(): JSX.Element {
   // replaced by the first keystroke. Tab between the thought and a duration
   // also changes the state, and selecting there would make the next keystroke
   // wipe what was already typed, so a move within that ring keeps the caret.
-  const previousKind = useRef<WidgetState['kind']>(state.kind)
+  const previousState = useRef<WidgetState>(state)
   useEffect(() => {
-    const previous = previousKind.current
-    previousKind.current = state.kind
-    if (
-      state.kind !== 'capturing' &&
-      state.kind !== 'starting' &&
-      state.kind !== 'noting' &&
-      state.kind !== 'renaming' &&
-      state.kind !== 'resumed'
-    ) {
-      return
-    }
+    const before = previousState.current
+    if (!holdsKeyboard(state)) return
     const input = inputRef.current
     if (input === null) return
     input.focus()
-    // Carried over, so left as typed: the draft moving round the idle ring,
-    // and a half typed thought coming back from renaming. Entering renaming
-    // does select, since the task name is there to be replaced or corrected.
-    const carried =
-      ((previous === 'noting' || previous === 'starting') &&
-        (state.kind === 'noting' || state.kind === 'starting')) ||
-      (previous === 'renaming' && state.kind === 'capturing')
-    if (!carried) input.select()
+    // See selectsOnFocus for which transitions keep typed text unselected.
+    if (selectsOnFocus(before, state)) input.select()
     void mark('input focused')
   }, [state.kind, focusTick])
+
+  // The state as of the last render, for the effect above. Recorded on every
+  // render, not when the kind changes: typing changes the draft without
+  // changing the kind, and comparing against the draft from when the state was
+  // entered would mistake typed text for an injected offer and select it.
+  useEffect(() => {
+    previousState.current = state
+  })
 
   useEffect(() => {
     if (state.kind !== 'confirmed') return
@@ -542,9 +550,16 @@ export function CaptureWidget(): JSX.Element {
 
   /** The task name, corrected mid session. Unchanged or empty is a cancel. */
   const commitRename = useCallback(
-    async (session: RunningSession, draft: string): Promise<void> => {
+    async (session: RunningSession, draft: string, thought: string): Promise<void> => {
+      // With a thought held from before Tab, Enter on the name is not the end of
+      // the interaction: the widget goes back to it and keeps the keyboard.
+      const backToThought = thought.trim() !== ''
       const task = draft.trim()
       if (task === '' || task === session.task) {
+        if (backToThought) {
+          dispatch({ type: 'cycle' })
+          return
+        }
         dispatch({ type: 'captureDismissed' })
         await returnFocus()
         return
@@ -557,7 +572,7 @@ export function CaptureWidget(): JSX.Element {
         return
       }
       dispatch({ type: 'renamed', task })
-      await returnFocus()
+      if (!backToThought) await returnFocus()
       void touch(session.id)
       // The review list shows the task beside each capture.
       void emit(CAPTURES_CHANGED_EVENT)
@@ -623,7 +638,7 @@ export function CaptureWidget(): JSX.Element {
           return
         }
         if (current.kind === 'renaming') {
-          void commitRename(current.session, current.draft)
+          void commitRename(current.session, current.draft, current.thought)
           return
         }
         if (current.kind === 'starting') {
@@ -722,6 +737,18 @@ function renderBody(
         <div className="hint" data-tauri-drag-region>
           {shortcut}
         </div>
+      )
+
+    case 'offered':
+      return (
+        <>
+          <div className="hint" data-tauri-drag-region>
+            {shortcut}
+          </div>
+          <div className="secondary" data-tauri-drag-region>
+            {fill(t.offerHint, { task: state.offer.task })}
+          </div>
+        </>
       )
 
     case 'starting':

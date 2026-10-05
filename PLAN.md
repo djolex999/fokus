@@ -190,6 +190,34 @@ Restore from backup inside the app (a backup is a file; restoring is replacing t
 
 ---
 
+## Session 7 — capture loop hardening
+
+Added 2026-10-05, from a review pass over the app. Group 1 of its findings: every way the capture loop could lose typed text or send it somewhere it was not meant to go.
+
+### Scope
+
+1. **The resume panel kept only the second keystroke onward.** The first key became the draft, the focus effect selected it as an arrival, the second key replaced it. Since Session 3.
+2. **A warm start took over the shortcut.** Session 5 made the shortcut mean a thought first everywhere except here: within two hours of a stop, shortcut, thought, Enter started a session. The stopped session is now an *offer*: shown on the idle widget as `tab: <task>`, taken by the first Tab from an empty thought, with its own duration. It expires on the warm start window, so an app left open does not keep offering it.
+3. **The timer running out mid capture lost the text and stranded focus.** A half typed thought now carries into `noting` (a thought with no session, Enter still saves it); with nothing typed, focus is handed back.
+4. **Confirming a rename dropped a half typed thought.** Enter on the name now returns to the thought.
+
+The decision of whether to select the input's text moved out of the effect into `selectsOnFocus`, a pure function, because every bug above lived in untested effect glue.
+
+### Non-goals
+
+Groups 2 to 4 of the same review (statistics, behaviour, cleanup). Any change to capture during a session beyond keeping text.
+
+### Acceptance
+
+- [x] Reducer and selection rule exercised with node: 57 checks, including each bug as a failing case first.
+- [x] `pnpm tsc --noEmit`, `cargo check`, `cargo test` clean.
+- [ ] Hand: away 5 minutes, shortcut, type a word, Enter. The whole word is saved.
+- [ ] Hand: stop a session early, quit and relaunch. Widget shows `tab: <task>`. Shortcut opens a thought; Tab gives the old task.
+- [ ] Hand: start a 10 minute session, open capture near 0:00, keep typing past the end. Text stays, Enter saves it as written down.
+- [ ] Hand: type a thought, Tab, fix the name, Enter. Back at the thought with it intact.
+
+---
+
 ## Definition of done for v1
 
 Capture round-trip under three seconds, and the app used for one full working day without the main window being opened mid-session.

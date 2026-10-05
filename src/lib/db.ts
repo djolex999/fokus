@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import type { OpenSessionRow, PlannedMinutes, RunningSession } from '../types/session'
+import type { Offer, OpenSessionRow, PlannedMinutes, RunningSession } from '../types/session'
 import { toPlannedMinutes } from '../types/session'
 import type { Answers } from '../types/asrs'
 import type { CaptureRow, SessionRow } from '../types/stats'
@@ -160,10 +160,7 @@ const WARM_START_WINDOW_HOURS = 2
  *  done, and neither is a false start, because the next session is the same
  *  work under the name that replaced it. Both are decided by `classifyEnding`
  *  rather than restated in SQL. */
-export async function lastAbandonedSession(): Promise<{
-  task: string
-  plannedMin: PlannedMinutes
-} | null> {
+export async function lastAbandonedSession(): Promise<Offer | null> {
   const conn = await db()
   // julianday() rather than a string comparison: both sides are parsed as dates
   // instead of trusting that the stored ISO format and SQLite's own agree
@@ -191,8 +188,17 @@ export async function lastAbandonedSession(): Promise<{
     (row) =>
       classifyEnding({ ...row, outcome: 'abandoned' }, row.next_started_at) === 'stoppedEarly',
   )
-  if (stopped === undefined) return null
-  return { task: stopped.task, plannedMin: toPlannedMinutes(stopped.planned_min) }
+  if (stopped === undefined || stopped.ended_at === null) return null
+  // Expires on the same window it was selected by, so an app left running does
+  // not keep offering a stop from days ago.
+  const expiresAt = new Date(
+    Date.parse(stopped.ended_at) + WARM_START_WINDOW_HOURS * 60 * 60 * 1000,
+  ).toISOString()
+  return {
+    task: stopped.task,
+    plannedMin: toPlannedMinutes(stopped.planned_min),
+    expiresAt,
+  }
 }
 
 /** The most recent capture texts for a session, newest first. Feeds the resume

@@ -1150,3 +1150,36 @@ settled it.
 The lesson is the one from the "it worked" entry, applied to output: the
 artifact is the test. A browser print preview of the same CSS would have passed
 all four of these.
+
+## Session 7: the review found the capture loop could lose text four ways
+
+2026-10-05. A three way review pass over the app (capture loop, data layer,
+constraints and docs), each finding then checked against the code before being
+believed. The constraints all held and nothing lost stored data. The worst
+findings were in the loop that is the product.
+
+All four shared a cause: they lived in effect glue that no check reached. The
+reducer had been tested every session; the focus effect, which decides whether
+the input's text is selected, never was. It treated two transitions as arrivals
+when the user had already typed (resume panel's first key; a thought surviving a
+rename or the session's end), and a third bug came from comparing against the
+state as of the last kind change rather than the last render, which would have
+selected text the user had just typed. That decision is now `selectsOnFocus`, a
+pure function beside the reducer, and is tested like it.
+
+The warm start was the design conflict: Session 3's "one keypress to resume"
+against Session 5's "the shortcut means a thought first". Resolved for Session
+5. The stopped session is an offer behind the first Tab from an empty thought,
+so resuming costs one extra key and the thought habit never starts a session.
+The offer carries an expiry, the stop plus the warm start window, because the
+app can stay open for days and an offer that only expired on use would bring
+back the five day old task the window was added to remove.
+
+Timer ending mid capture: the thought carries into `noting` as a thought with no
+session rather than being attached to the session that just ended. Simpler, and
+it still counts toward the week. Focus is handed back when the session ending
+leaves no input, decided by running the reducer on the action rather than
+restating its rule in the widget.
+
+Each bug was written as a failing node check before the fix. 57 checks across
+the reducer and the selection rule pass. The hand tests are in PLAN.md.
