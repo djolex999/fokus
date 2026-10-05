@@ -273,8 +273,9 @@ export async function renameSession(sessionId: number, task: string): Promise<vo
 }
 
 /**
- * A complete, consistent copy of the database at `path`, written by SQLite on
- * this connection. Refuses a path that already exists, so it cannot overwrite
+ * A complete, consistent copy of the database at `path`, written by SQLite
+ * through the plugin's connection pool. WAL or not, it copies everything
+ * committed. Refuses a path that already exists, so it cannot overwrite
  * an earlier backup.
  */
 export async function vacuumInto(path: string): Promise<void> {

@@ -1240,3 +1240,43 @@ then the tag, and keep checking which commit Pages built.
 
 None of these is reachable by the node checks: they live in event handlers and
 effects. Each was confirmed by reading the path end to end before the fix.
+
+## Review group 4: cleanup, and corrections to earlier entries
+
+2026-10-05.
+
+**Code.** `console.error` replaced by `report()` in the four widget paths that
+still used it; a bundled app shows no console, so those failures were invisible.
+The ASRS history's `/ 6` and the backup's same-minute refusal moved into
+`i18n.ts`. The Serbian triage button said `uradi` ("do it") while the English
+had been corrected to "done", for the reason recorded in "English copy, revised
+after reading it out loud": the button records that something was done. It is
+now `urađeno`. The print legend got a print colour, so every colour on the sheet
+is set for paper. Three capabilities nothing used were removed
+(`core:event:allow-emit-to`, `core:window:allow-set-focus`, `sql:allow-close`),
+and so was the frontend package `@tauri-apps/plugin-global-shortcut`, imported
+nowhere; the shortcut is registered by the Rust plugin, which stays.
+
+**Comments** corrected where they contradicted the code: the stacked
+`window.print()` rationale on `printPage`, the Session 1 history at the top of
+`session.ts`, `finished` "holding" at 0:00, the warm start "prefilled", the
+statistics' "a running task cannot be renamed", the ASRS `text` field described
+as always Serbian, the print block "inverting the theme wholesale", the backup
+running "on this connection", migration 6 claiming a never-used table gets no
+mark (it gets NULL; comment only, SQL untouched), and clear history "not
+undoable" (recoverable by hand since Session 6).
+
+**Corrections to earlier entries in this file**, left in place as written and
+corrected here rather than rewritten:
+- "One file holding copy is one file too many" says the strings are "covered by
+  a test asserting key parity". There is no such test in the repository and no
+  test runner; whatever ran then was not kept. Parity is enforced by the shared
+  `Strings` type, which makes a missing key a compile error, not by a test. And
+  not every string was in `i18n.ts`: the printed score's `od` and the ASRS
+  history's `/ 6` were found outside it later.
+- The entry above with "a restart abandons the session anyway" predates the
+  2026-09-10 change that resumes an unexpired session at startup. It is no
+  longer true.
+- "Windows: written blind, then run" dates the first run 2026-09-11. The commit
+  recording it (`e77433a`) is 2026-09-10 23:12 +0200, and README says
+  2026-09-10. Which is right is not recoverable; README and git agree.

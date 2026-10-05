@@ -75,9 +75,12 @@ pub fn migrations() -> Vec<Migration> {
             // captures that were made and later cleared (76 of them, found this
             // way on 2026-09-16). So it is carried across before the swap: set
             // on the new table's row if the copy created one, inserted if the
-            // old table was empty but used. A never-used table has no mark and
-            // gets none. Checked against a copy of the real database and three
-            // constructed ones before it was committed.
+            // old table was empty but used. A never-used table ends with a NULL
+            // mark (the copy of zero rows still creates the row, and the update
+            // finds nothing to copy); harmless, the next insert gets id 1.
+            // Checked against a copy of the real database and three constructed
+            // ones before it was committed. Comment corrected 2026-10-05; the
+            // SQL is unchanged.
             description: "captures can exist without a session",
             sql: "CREATE TABLE captures_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

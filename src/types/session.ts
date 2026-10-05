@@ -1,16 +1,12 @@
 /**
  * One union for the whole widget rather than two that can disagree.
  *
- * `CLAUDE.md` specifies a `CaptureState` of idle / capturing / confirmed /
- * resumed. Session 2 needs states that union cannot express, because the widget
- * now has to show a session that is running but not being captured into, and a
- * session being started. Keeping capture state and session state as two separate
- * unions would reintroduce exactly the problem the original one was written to
- * avoid: 'capturing' with no session is representable and meaningless.
- *
- * So the union absorbed the session instead of sitting beside it. idle,
- * capturing and confirmed are all still here, each now carrying the session they
- * belong to. 'resumed' arrives in Session 3.
+ * Session 1's `CaptureState` (idle / capturing / confirmed / resumed) could not
+ * show a session running but not being captured into, or one being started.
+ * Keeping capture state and session state as two unions would reintroduce the
+ * problem the first was written to avoid: 'capturing' with no session is
+ * representable and meaningless. So the union absorbed the session, and every
+ * state that belongs to one carries it. `CLAUDE.md` lists the current union.
  */
 
 export type PlannedMinutes = 10 | 25 | 50
@@ -59,7 +55,8 @@ export type WidgetState =
   /** Back after five minutes or more away: the task, and the last three things
    *  captured, so the thread can be picked up without opening anything. */
   | { kind: 'resumed'; session: RunningSession; recent: string[] }
-  /** The countdown reached zero. Holds at 0:00 until the next shortcut press. */
+  /** The countdown reached zero. Shows 0:00 until the next shortcut press or
+   *  `FINISHED_MS` passes, whichever is first. */
   | { kind: 'finished'; task: string }
 
 export type WidgetAction =

@@ -103,6 +103,8 @@ type Strings = {
   clearCancel: string
   errNotDeleted: string
   errNotPrinted: string
+  /** A second clear inside the same minute, refused so nothing goes uncopied. */
+  errBackupThisMinute: string
   // printed page
   printRange: string
   printAsrsHeading: string
@@ -144,7 +146,7 @@ const sr: Strings = {
   tabStats: 'statistika',
   printAction: 'pripremi za pregled',
   nothingPending: 'nema ništa',
-  resolveDone: 'uradi',
+  resolveDone: 'urađeno',
   resolveScheduled: 'zakaži',
   resolveDelete: 'obriši',
   scale: ['nikada', 'retko', 'ponekad', 'često', 'vrlo često'],
@@ -178,6 +180,7 @@ const sr: Strings = {
   clearCancel: 'otkaži',
   errNotDeleted: 'nije obrisano',
   errNotPrinted: 'štampanje se nije otvorilo',
+  errBackupThisMinute: 'kopija iz ovog minuta već postoji, probaj za minut',
   printRange: 'do',
   printAsrsHeading: 'ASRS v1.1, deo A',
   printNoAsrs: 'Upitnik nije popunjen.',
@@ -251,6 +254,7 @@ const en: Strings = {
   clearCancel: 'cancel',
   errNotDeleted: 'not deleted',
   errNotPrinted: 'printing did not open',
+  errBackupThisMinute: 'a backup from this minute already exists, try again in a minute',
   printRange: 'to',
   printAsrsHeading: 'ASRS v1.1, Part A',
   printNoAsrs: 'The questionnaire has not been filled in.',

@@ -68,8 +68,8 @@ export function Stats(): JSX.Element {
 }
 
 /**
- * Two steps, because this is not undoable and the numbers behind it took weeks
- * to accumulate. Inline rather than a dialog: a modal over an anti-distraction
+ * Two steps, because the numbers behind it took weeks to accumulate. It is
+ * recoverable since Session 6, from the copy taken first, but only by hand. Inline rather than a dialog: a modal over an anti-distraction
  * tool to ask "are you sure" is its own small interruption.
  */
 function ClearSessions({ onCleared }: { onCleared: () => Promise<void> }): JSX.Element {

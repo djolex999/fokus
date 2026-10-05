@@ -1,6 +1,6 @@
 # fokus — development plan
 
-Four sessions. Each ends with a runnable app. Ordering is deliberate: the capture loop is proven before anything decorates it, and the app is daily-usable after Session 2 even if the rest is never built.
+Four sessions to v1, and Sessions 5 to 7 added after it from use and review. Each ends with a runnable app. Ordering is deliberate: the capture loop is proven before anything decorates it, and the app is daily-usable after Session 2 even if the rest is never built.
 
 Read `CLAUDE.md` before every session. Constraints there override anything below.
 
@@ -112,7 +112,7 @@ ASRS, statistics, packaging.
    - Time-of-day bars: started vs abandoned
    - One line: returns this week vs last week
    - Bars are divs. No chart library.
-4. **"Pripremi za pregled"**: a print stylesheet producing a single page with the ASRS result, the statistics, and the date range covered. Browser print to PDF is sufficient; do not add a PDF library.
+4. **"Pripremi za pregled"**: a print stylesheet producing a single page with the ASRS result, the statistics, and the date range covered. ~~Browser print to PDF is sufficient;~~ do not add a PDF library. **Revised 2026-09-25:** `window.print()` does nothing on macOS; printing goes through the native `print_page` command, whose dialog also saves a PDF.
 5. ~~**Packaging:**~~ Pulled forward to the end of Session 2 on 2026-09-10, because the working day gate in Session 2 cannot be run against `pnpm tauri dev`: a file save reloads the app and abandons the live session. Build an installer, install it, and use the installed build.
 
 ### Acceptance

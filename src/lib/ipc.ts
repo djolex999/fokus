@@ -57,7 +57,8 @@ export async function pruneBackups(): Promise<number> {
   return invoke<number>('prune_backups')
 }
 
-/** Sound returns for every new session, so the tray's tick returns with it. */
+/** Sound returns for every new session, so the tray's label goes back to offering
+ *  to silence it. */
 export async function resetMusic(): Promise<void> {
   await invoke('reset_music')
 }
@@ -68,9 +69,6 @@ export async function setWidgetHeight(height: number): Promise<void> {
   await invoke('set_widget_height', { height })
 }
 
-/** Browser print to PDF is the entire export mechanism. A PDF library would be
- *  a dependency bought for one button. The JS API has no print binding in this
- *  version, so this is the webview's own, which WKWebView honours. */
 /** The system print dialog, opened natively. See `print_page` in Rust for why
  *  this is not `window.print()`. */
 export async function printPage(): Promise<void> {

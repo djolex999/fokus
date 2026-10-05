@@ -33,10 +33,11 @@ export const FALSE_START_MS = 60_000
 
 /**
  * A session stopped inside this long and replaced within `RESTART_GAP_MS` is a
- * false start too, however long past a minute it ran. The running task cannot
- * be renamed, so fixing a typo means ending the session and starting another,
- * and the tell is not the duration but the immediate replacement. Observed:
- * 95 seconds, next session four seconds later, same work.
+ * false start too, however long past a minute it ran. Before Session 6 a
+ * running task could not be renamed, so fixing a typo meant ending the session
+ * and starting another; the tell is not the duration but the immediate
+ * replacement. Observed: 95 seconds, next session four seconds later, same
+ * work. Kept now renaming exists, because those sessions are still in the data.
  */
 export const RESTART_MAX_MS = 5 * 60_000
 export const RESTART_GAP_MS = 15_000

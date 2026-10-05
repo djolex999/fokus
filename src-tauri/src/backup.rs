@@ -1,8 +1,8 @@
 //! Backups of the database, written by the webview with `VACUUM INTO`.
 //!
 //! Rust is scaffolding here as everywhere: it owns the folder, decides where a
-//! named file would go, and prunes. The copy itself is SQL on the webview's own
-//! connection, so it is consistent with whatever that connection has written.
+//! named file would go, and prunes. The copy itself is SQL from the webview
+//! through the sql plugin's pool, so it holds everything committed.
 //!
 //! Only two shapes of file name are accepted from the webview, and the path is
 //! always built here. A name is data from the other side of the IPC boundary;

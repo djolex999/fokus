@@ -1,5 +1,6 @@
 import { clearAllSessions, vacuumInto } from './db'
 import { backupTarget, describeError, pruneBackups, report } from './ipc'
+import { t } from './i18n'
 
 /** How often a running app checks whether today's copy exists. */
 export const BACKUP_CHECK_MS = 60 * 60 * 1000
@@ -48,7 +49,7 @@ export async function clearWithBackup(
   // Anything captured between the two would be deleted with no copy of it, so
   // this refuses rather than reuse the earlier file.
   if (target === null) {
-    throw new Error('a backup from this minute already exists, try again in a minute')
+    throw new Error(t.errBackupThisMinute)
   }
   await vacuumInto(target)
   return clearAllSessions()

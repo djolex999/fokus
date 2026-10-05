@@ -42,7 +42,9 @@ The shortcut is **Ctrl+Shift+Space** here, not Cmd.
 
 1. Open Notepad, type something, leave the caret in it
 2. Ctrl+Shift+Space → the widget should take the keyboard
-3. Type a task, Enter → the timer starts
+3. Type a task, press Tab (the row moves from *thought* to *25*), Enter → the
+   timer starts. Since v0.1.7 the shortcut opens a thought first; Enter
+   without Tab writes it down instead of starting a session.
 4. Ctrl+Shift+Space again → type a thought → Enter
 5. **Without touching the mouse, keep typing.** Do the letters land back in
    Notepad?

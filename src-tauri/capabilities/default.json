@@ -10,12 +10,9 @@
     "core:event:allow-listen",
     "core:event:allow-unlisten",
     "core:event:allow-emit",
-    "core:event:allow-emit-to",
-    "core:window:allow-set-focus",
     "core:window:allow-start-dragging",
     "sql:allow-load",
     "sql:allow-execute",
-    "sql:allow-select",
-    "sql:allow-close"
+    "sql:allow-select"
   ]
 }

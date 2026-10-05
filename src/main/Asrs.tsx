@@ -204,7 +204,9 @@ function Result({
             {history.slice(1).map((entry) => (
               <li key={entry.id}>
                 <span className="meta">{formatDate(entry.taken_at)}</span>
-                <span>{entry.part_a_score} / 6</span>
+                <span>
+                  {entry.part_a_score} {t.outOfSix}
+                </span>
               </li>
             ))}
           </ul>

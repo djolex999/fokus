@@ -280,9 +280,9 @@ export function CaptureWidget(): JSX.Element {
         return
       }
 
-      // Warm start. Prefilled but not focused: grabbing the keyboard at launch
-      // would interrupt whatever the machine was already doing, which is the
-      // one thing this app must never do.
+      // Warm start: a recent stop is offered on the idle widget, behind Tab,
+      // and nothing is focused. Grabbing the keyboard at launch would interrupt
+      // whatever the machine was already doing, which this app must never do.
       const previous = await lastAbandonedSession()
       if (previous !== null) {
         dispatch({ type: 'warmStart', offer: previous })
@@ -312,7 +312,7 @@ export function CaptureWidget(): JSX.Element {
     try {
       dispatch({ type: 'touched', at: await touchSession(sessionId) })
     } catch (e: unknown) {
-      console.error('could not record activity:', describeError(e))
+      report(`could not record activity: ${describeError(e)}`)
     }
   }, [])
 
@@ -347,7 +347,7 @@ export function CaptureWidget(): JSX.Element {
     if (now - lastHeartbeat.current < HEARTBEAT_MS) return
     lastHeartbeat.current = now
     heartbeatSession(session.id).catch((e: unknown) =>
-      console.error('could not record liveness:', describeError(e)),
+      report(`could not record liveness: ${describeError(e)}`),
     )
   }, [state, now])
 
@@ -444,7 +444,7 @@ export function CaptureWidget(): JSX.Element {
   useEffect(() => {
     const height = state.kind === 'resumed' ? WIDGET_HEIGHT_RESUMED : WIDGET_HEIGHT
     setWidgetHeight(height).catch((e: unknown) =>
-      console.error('could not resize widget:', describeError(e)),
+      report(`could not resize widget: ${describeError(e)}`),
     )
   }, [state.kind])
 
@@ -607,7 +607,7 @@ export function CaptureWidget(): JSX.Element {
       try {
         dispatch({ type: 'captureConfirmed', returnNumber: await countCaptures(session.id) })
       } catch (e: unknown) {
-        console.error('capture saved, but counting it failed:', describeError(e))
+        report(`capture saved, but counting it failed: ${describeError(e)}`)
         dispatch({ type: 'captureDismissed' })
       }
       void mark('confirmation shown')
@@ -715,7 +715,6 @@ export function CaptureWidget(): JSX.Element {
           <div className="progress-fill" style={{ width: `${elapsedFraction(session, now) * 100}%` }} />
         </div>
       )}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={audioRef} preload="none" />
     </div>
   )

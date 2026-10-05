@@ -26,7 +26,8 @@ export type AsrsQuestion = {
   /** 1 based, matching the printed form. */
   number: number
   part: 'A' | 'B'
-  /** Serbian, what the user actually answers. */
+  /** The Serbian translation, shown as the question in Serbian. In English the
+   *  official wording below is the question. */
   text: string
   /** The official wording, carried through to the printed page so a clinician
    *  can see exactly what was asked rather than trusting a translation. */

@@ -21,7 +21,7 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 **Sound.** Drop audio files in `~/fokus/audio` (the tray's *Open music folder* creates it and opens it) and the first one plays, looped, for the duration of a session. There are no controls: a `♪` at half opacity tells you it is playing, and that is the entire interface.
 
-**Backups.** Once a day, and right before *clear history*, a complete copy of the database goes to `~/fokus/backups`. The last 14 daily copies are kept. Nothing to set up and nothing on screen; the tray's *Open backups folder* shows them. To restore, quit fokus and copy one over `fokus.db` in the app's data folder.
+**Backups.** Once a day, and right before *delete all sessions*, a complete copy of the database goes to `~/fokus/backups`. The last 14 daily copies are kept. Nothing to set up and nothing on screen; the tray's *Open backups folder* shows them. To restore, quit fokus and copy one over `fokus.db` in the app's data folder.
 
 **Evidence.** The WHO ASRS v1.1 screener, plus statistics over your sessions, printable as a single page to take to a doctor.
 
@@ -70,7 +70,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 Most of the interesting decisions are refusals, and they are written down rather than implied.
 
-`CLAUDE.md` holds the constraints: no notifications, no network, no streaks or points or badges, no task management, no settings beyond a shortcut remap. `PLAN.md` is the four-session build plan, including the places it turned out to be wrong and was overruled by use. `NOTES.md` is the running record of decisions, measurements, and bugs — including several where the fix that seemed obvious was checked and turned out to be a no-op.
+`CLAUDE.md` holds the constraints: no notifications, no network, no streaks or points or badges, no task management, no settings beyond a shortcut remap. `PLAN.md` is the build plan, four sessions to v1 and the ones added after, including the places it turned out to be wrong and was overruled by use. `NOTES.md` is the running record of decisions, measurements, and bugs — including several where the fix that seemed obvious was checked and turned out to be a no-op.
 
 If you read one file to judge the engineering, read `NOTES.md`.
 

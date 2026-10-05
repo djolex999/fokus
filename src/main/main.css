@@ -471,8 +471,8 @@ body {
 }
 
 @media print {
-  /* Paper is white and ink is expensive. The screen theme is inverted wholesale
-     rather than maintained twice. */
+  /* Paper is white and ink is expensive. Every colour on the sheet is remapped
+     here one by one for paper; none is left to inherit from the dark theme. */
   body {
     background: #fff;
     color: #000;
@@ -598,6 +598,13 @@ body {
 
   .print-sheet .swatch-abandoned {
     background: #555;
+  }
+
+  /* Its screen colour is a dark grey that happens to read on paper. Set here
+     anyway, so every colour on the sheet is chosen for paper rather than
+     inherited from the dark theme by luck. */
+  .print-sheet .legend {
+    color: #333;
   }
 
   @page {

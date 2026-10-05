@@ -33,7 +33,7 @@ The only reward mechanic permitted is the return counter (Session 3).
 
 Dependency budget: if a package is not required by the constraints above, do not add it. Every dependency is maintenance cost on a personal tool.
 
-Taken deliberately, each because Tauri has no API for the job: `objc2` and `objc2-app-kit` for macOS focus return, `windows` for the same on Windows. No frontend dependency has been added since the scaffold.
+Taken deliberately, each because Tauri has no API for the job: `objc2`, `objc2-app-kit` and `objc2-foundation` for macOS focus return (the last only switches on the `NSString`/`NSArray` features the app name lookup needs), `windows` for the same on Windows. No frontend dependency has been added since the scaffold; one unused one (`@tauri-apps/plugin-global-shortcut`) was removed on 2026-10-05.
 
 `tauri.conf.json` hooks call `npm run`, not `pnpm`. pnpm's build script gate rejects `esbuild`, and the setting that permits it has moved between versions twice, so a clone fails on a machine with a different pnpm. `npm run` only executes the package.json script and works regardless of which package manager populated `node_modules`.
 
