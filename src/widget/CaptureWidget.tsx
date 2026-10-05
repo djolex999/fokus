@@ -273,10 +273,12 @@ export function CaptureWidget(): JSX.Element {
         )
         report(`startup: resumed "${resume.task}", about ${left} min left`)
         dispatch({ type: 'sessionStarted', session: toRunningSession(resume) })
-        // Music will usually be refused here: the webview wants a user gesture
-        // and launching the app is not one it can see. Reported rather than
-        // swallowed, so a silent resumed session has a reason on the record.
-        startAudio()
+        // No music on a resumed session. WKWebView refused it here anyway (a
+        // launch is not a user gesture), but WebView2 on Windows may not, and
+        // sound starting because the app opened, possibly at login, is an
+        // interruption nobody asked for. Both platforms now do what macOS
+        // already did. Music comes back with the next session started from
+        // the keyboard, which is a gesture.
         return
       }
 

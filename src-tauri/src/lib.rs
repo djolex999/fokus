@@ -530,6 +530,21 @@ pub fn run() {
                 });
             }
 
+            // The widget is never closed, only hidden with the app. Without this,
+            // Close Window (Cmd+W) in the default menu, pressed while the widget
+            // has the keyboard mid capture, could destroy it and leave the
+            // shortcut dead until a restart. Whether it reaches a frameless
+            // window at all was not settled; refusing costs nothing. Quitting is
+            // unaffected: it exits the app rather than closing windows, as the
+            // same guard on the main window already shows.
+            if let Some(widget) = app.get_webview_window(WIDGET_LABEL) {
+                widget.on_window_event(|event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                    }
+                });
+            }
+
             let shortcut = capture_shortcut();
             app.handle().plugin(
                 tauri_plugin_global_shortcut::Builder::new()

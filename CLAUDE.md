@@ -19,6 +19,8 @@ Daily streaks, points, levels, badges, any comparison to other users. Notificati
 
 Audio specifically: no playlist screen, no skip, no volume slider, no sound library, no tone generator, no network audio source including YouTube.
 
+No self-registration to start at login: registering a login item makes macOS 13+ post a notification, which this app must never cause. README explains doing it by hand. Likewise no audio that starts without a keyboard gesture, such as on a session resumed at launch.
+
 The only reward mechanic permitted is the return counter (Session 3).
 
 ## Stack

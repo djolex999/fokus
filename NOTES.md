@@ -1280,3 +1280,29 @@ corrected here rather than rewritten:
 - "Windows: written blind, then run" dates the first run 2026-09-11. The commit
   recording it (`e77433a`) is 2026-09-10 23:12 +0200, and README says
   2026-09-10. Which is right is not recoverable; README and git agree.
+
+## The review's two open items, and start at login
+
+2026-10-05.
+
+**The widget refuses to close.** Tauri's default macOS menu has Close Window on
+Cmd+W. Whether it reaches a frameless window was never settled; if it did,
+pressing it mid capture would destroy the widget and leave the shortcut dead
+until a restart. `prevent_close` on the widget costs nothing and settles it.
+Quitting is unaffected, as the same guard on the main window already showed.
+
+**No music on a resumed session.** At startup a session still running is
+resumed, and the code called `startAudio()`. WKWebView refused it (a launch is
+not a gesture), so on macOS nothing changes. WebView2 has a looser autoplay
+policy, and sound starting because the app opened, possibly at login, is an
+interruption. Removed on both platforms. Music returns with the next session
+started from the keyboard. Not verified on Windows; there is no Windows machine
+here.
+
+**Start at login is instructions, not code.** Registering a login item, by
+SMAppService or a LaunchAgent, makes macOS 13+ post a "background item added"
+notification. fokus would not send it, but it would cause it, and the rule is
+that this app is never the reason for an interruption. A setting to control it
+is forbidden too. So README explains adding it by hand, once, on both
+platforms, and says why. The cost is real: until the user does it, every
+restart leaves the shortcut dead until fokus is opened.

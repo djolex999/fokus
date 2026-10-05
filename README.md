@@ -39,6 +39,11 @@ The Serbian rendering of the questionnaire is a translation, not the officially 
 
 The build is **not signed or notarised**, so the first launch needs: right-click the app → Open, or System Settings → Privacy & Security → Open Anyway.
 
+**Start it at login.** The shortcut only works while fokus is running, and it does not add itself to your login items: registering one makes macOS show a notification, and an app built to avoid interruptions should not cause one. Once, by hand:
+
+- **macOS**: System Settings → General → Login Items → **+** under "Open at Login" → choose fokus.
+- **Windows**: press Win+R, type `shell:startup`, Enter, and put a shortcut to fokus in the folder that opens.
+
 ## Build it yourself
 
 ```bash
