@@ -1192,3 +1192,26 @@ manual `POST .../pages/builds`. v0.1.10 pushed the commit on its own, then the
 tag: Pages started building the commit by itself before the tag went up. One
 clean case, not proof, but it matches all four observations. Push the commit,
 then the tag, and keep checking which commit Pages built.
+
+## Review group 2: the numbers a doctor reads
+
+2026-10-05. Four fixes from the review, each reproduced before it was fixed.
+
+- **A running session counted in the statistics** (every total, no outcome),
+  lowering the completion rate whenever the sheet was printed mid session. Now
+  excluded with false starts: neither is data yet.
+- **"Returns last week" moved by an hour in the week after a clock change.**
+  The previous Monday was computed as 7×24 hours back; a week with a DST change
+  is 167 or 169. Now a calendar week back. Reproduced and checked under
+  Europe/Belgrade with the reviewer's dates, and rechecked in UTC and New York.
+- **Print went ahead on a failed load.** `loadSheet` caught its own error and
+  logged it to a console that a bundled app does not show, so the print chained
+  after it printed "No sessions" or stale numbers. It now throws to the print
+  button, which shows the error and prints nothing. The same change uses
+  `flushSync`, so the fresh numbers are in the DOM before the native dialog lays
+  the page out; before, they rendered on a later task and the dialog could take
+  the previous ones.
+- **The landing page said "Fourteen days of your own sessions".** No window
+  exists; the statistics use every session and the sheet prints the date range
+  it covers. The claim was corrected rather than the code changed to fit it: a
+  doctor is better served by the real range than an arbitrary cut.

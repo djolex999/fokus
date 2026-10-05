@@ -141,7 +141,13 @@ export function computeStats(
     ordered.map((s, i) => [s.id, classifyEnding(s, ordered[i + 1]?.started_at ?? null)]),
   )
   const endingOf = (s: SessionRow): Ending => endings.get(s.id) ?? classifyEnding(s)
-  const sessions = allSessions.filter((s) => endingOf(s) !== 'falseStart')
+  // Neither a false start nor a session still running is data yet. A running
+  // one counted in every total but in no outcome, so it pulled the completion
+  // rate down, on a page the main window can print while it runs.
+  const sessions = allSessions.filter((s) => {
+    const ending = endingOf(s)
+    return ending !== 'falseStart' && ending !== 'open'
+  })
   const counted = new Set(sessions.map((s) => s.id))
 
   const durations = new Map<number, DurationRow>()
@@ -181,7 +187,11 @@ export function computeStats(
   }
 
   const weekStart = startOfWeek(now).getTime()
-  const previousWeekStart = weekStart - 7 * 24 * 60 * 60 * 1000
+  // A calendar week back, not 7×24 hours: a week containing a clock change is
+  // 167 or 169 hours long, and fixed arithmetic moved the boundary by an hour.
+  const previousWeek = startOfWeek(now)
+  previousWeek.setDate(previousWeek.getDate() - 7)
+  const previousWeekStart = previousWeek.getTime()
   let returnsThisWeek = 0
   let returnsLastWeek = 0
   for (const capture of captures) {
