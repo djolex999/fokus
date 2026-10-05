@@ -509,6 +509,10 @@ export function CaptureWidget(): JSX.Element {
       try {
         dispatch({ type: 'sessionStarted', session: await startSession(task, plannedMin) })
       } catch (e: unknown) {
+        // The sound started in the key handler, before this could fail, so it
+        // has to be stopped here. Left playing, nothing else would stop it:
+        // with no session, End session only clears the widget.
+        stopAudio()
         setError(failure(t.errSessionNotStarted, e))
         return
       }
@@ -519,7 +523,7 @@ export function CaptureWidget(): JSX.Element {
       // playing itself already started in the key handler.
       resetMusic().catch((e: unknown) => report(`could not reset music: ${describeError(e)}`))
     },
-    [returnFocus],
+    [returnFocus, stopAudio],
   )
 
   /** A thought with no session running. Same path as a capture, less the
@@ -615,6 +619,21 @@ export function CaptureWidget(): JSX.Element {
     [returnFocus, touch],
   )
 
+  // One write at a time. The widget stays in its text state until the write
+  // returns, so a second Enter inside that IPC round trip repeated it: a
+  // duplicate capture inflating the return count, or two session rows with the
+  // first left open and later closed as a zero length stop. Cleared when the
+  // write settles either way, so a failed save can be retried.
+  const committing = useRef(false)
+  const commitOnce = useCallback((write: () => Promise<void>): void => {
+    committing.current = true
+    write()
+      .catch((e: unknown) => report(`commit failed unexpectedly: ${describeError(e)}`))
+      .finally(() => {
+        committing.current = false
+      })
+  }, [])
+
   const onKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>): void => {
       const current = stateRef.current
@@ -632,25 +651,26 @@ export function CaptureWidget(): JSX.Element {
       }
       if (event.key === 'Enter') {
         event.preventDefault()
+        if (committing.current) return
         if (current.kind === 'noting') {
           void mark('enter pressed')
-          void commitNote(current.draft)
+          commitOnce(() => commitNote(current.draft))
           return
         }
         if (current.kind === 'renaming') {
-          void commitRename(current.session, current.draft, current.thought)
+          commitOnce(() => commitRename(current.session, current.draft, current.thought))
           return
         }
         if (current.kind === 'starting') {
           // Synchronous, before any await, so the webview still counts this
           // keypress as the gesture that started the sound.
           if (current.draft.trim() !== '') startAudio()
-          void beginSession(current.draft, current.plannedMin)
+          commitOnce(() => beginSession(current.draft, current.plannedMin))
           return
         }
         if (current.kind === 'capturing') {
           void mark('enter pressed')
-          void commitCapture(current.session, current.draft)
+          commitOnce(() => commitCapture(current.session, current.draft))
           return
         }
         if (current.kind === 'resumed') {
@@ -673,7 +693,7 @@ export function CaptureWidget(): JSX.Element {
         void returnFocus()
       }
     },
-    [beginSession, commitCapture, commitNote, commitRename, returnFocus, startAudio],
+    [beginSession, commitCapture, commitNote, commitOnce, commitRename, returnFocus, startAudio],
   )
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {

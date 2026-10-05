@@ -10,12 +10,17 @@ import { formatDate } from './format'
 
 export function Stats(): JSX.Element {
   const [stats, setStats] = useState<StatsData | null>(null)
+  // Whether anything is stored, which is what clearing removes. Not
+  // `sessionCount`: that leaves out false starts and every thought written down
+  // with no session, so the button could vanish with data still there to clear.
+  const [hasHistory, setHasHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (): Promise<void> => {
     try {
       const [sessions, captures] = await Promise.all([allSessions(), allCaptureTimes()])
       setStats(computeStats(sessions, captures, new Date()))
+      setHasHistory(sessions.length > 0 || captures.length > 0)
     } catch (e: unknown) {
       setError(failure(t.errCannotLoad, e))
     }
@@ -40,7 +45,7 @@ export function Stats(): JSX.Element {
         <p className="empty">
           {fill(t.notEnoughSessions, { n: `${remaining} ${sessionsWord(remaining)}` })}
         </p>
-        {stats.sessionCount > 0 && <ClearSessions onCleared={load} />}
+        {hasHistory && <ClearSessions onCleared={load} />}
       </div>
     )
   }

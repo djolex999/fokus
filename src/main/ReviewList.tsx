@@ -57,8 +57,11 @@ export function ReviewList(): JSX.Element {
       try {
         await resolveCapture(id, resolution)
       } catch (e: unknown) {
-        setError(failure(t.errNotSaved, e))
+        // Refresh first, then the error: a successful refresh clears the error
+        // line, and in the other order it cleared this one in the same batch,
+        // so the row came back with no word about why.
         await refresh()
+        setError(failure(t.errNotSaved, e))
       }
     },
     [refresh],

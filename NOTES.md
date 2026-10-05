@@ -1215,3 +1215,28 @@ then the tag, and keep checking which commit Pages built.
   exists; the statistics use every session and the sheet prints the date range
   it covers. The claim was corrected rather than the code changed to fit it: a
   doctor is better served by the real range than an arbitrary cut.
+
+## Review group 3: four behaviour bugs, all in UI glue
+
+2026-10-05.
+
+- **Music kept playing after a session failed to start.** The sound starts in
+  the key handler, synchronously, because the webview only allows audio from a
+  user gesture; the session write comes after and can fail. Its catch showed
+  the error and left the music on, and with no session the tray's End session
+  only clears the widget, so nothing stopped it. The catch now stops it.
+- **A failed triage write showed no error.** The catch set the error and then
+  refreshed the list, and a successful refresh clears the error line in the
+  same batch. The row came back silently. Refresh first, then the error.
+- **Two Enters inside one IPC round trip wrote twice.** The widget stays in its
+  text state until the write returns, so nothing stopped the second: a
+  duplicate capture inflating the return count, or two session rows with the
+  first left open and later closed as a zero length stop. One write at a time
+  now, cleared when it settles either way so a failed save can be retried.
+- **The clear button could vanish with data still there.** It was gated on the
+  statistics' session count, which leaves out false starts and every thought
+  written down with no session. It now follows whether anything is stored,
+  which is what clearing removes.
+
+None of these is reachable by the node checks: they live in event handlers and
+effects. Each was confirmed by reading the path end to end before the fix.
