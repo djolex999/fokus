@@ -3,7 +3,8 @@
 // each one would have caught is named where there was one.
 
 export default function run(eq, { widgetReducer: r, sessionOf, holdsKeyboard, offerOf }) {
-  const session = { id: 7, task: 'pyhton', plannedMin: 25, startedAt: 'S', lastInteractionAt: 'S' }
+  const session = { id: 7, task: 'pyhton', plannedMin: 25, startedAt: '2026-01-01T00:00:00.000Z', lastInteractionAt: 'S' }
+  const ends = Date.parse('2026-01-01T00:25:00.000Z')
   const offer = { task: 'loom video', plannedMin: 10, expiresAt: '2026-01-01T02:00:00.000Z' }
   const idle = { kind: 'idle' }
   const running = { kind: 'running', session }
@@ -12,13 +13,13 @@ export default function run(eq, { widgetReducer: r, sessionOf, holdsKeyboard, of
 
   // Session 5: with no session running, the shortcut means a thought.
   const typed = run(idle, { type: 'shortcut' }, { type: 'edit', draft: 'reply' })
-  eq('idle shortcut opens a thought', typed, { kind: 'noting', draft: 'reply', offer: null })
-  eq('finished shortcut opens a thought', r({ kind: 'finished', task: 'x', written: 0 }, { type: 'shortcut' }), { kind: 'noting', draft: '', offer: null })
-  eq('noted shortcut opens a thought', r({ kind: 'noted', offer: null }, { type: 'shortcut' }), { kind: 'noting', draft: '', offer: null })
+  eq('idle shortcut opens a thought', typed, { kind: 'noting', draft: 'reply', offer: null, breakable: false })
+  eq('finished shortcut opens a thought, break on offer', r({ kind: 'finished', task: 'x', written: 0, endedAt: 1 }, { type: 'shortcut' }), { kind: 'noting', draft: '', offer: null, breakable: true })
+  eq('noted shortcut opens a thought', r({ kind: 'noted', offer: null }, { type: 'shortcut' }), { kind: 'noting', draft: '', offer: null, breakable: false })
   eq('ring: thought -> 25', r(typed, tab), { kind: 'starting', draft: 'reply', plannedMin: 25 })
   eq('ring: -> 50', run(typed, tab, tab), { kind: 'starting', draft: 'reply', plannedMin: 50 })
   eq('ring: -> 10', run(typed, tab, tab, tab), { kind: 'starting', draft: 'reply', plannedMin: 10 })
-  eq('ring: -> thought, draft kept', run(typed, tab, tab, tab, tab), { kind: 'noting', draft: 'reply', offer: null })
+  eq('ring: -> thought, draft kept', run(typed, tab, tab, tab, tab), { kind: 'noting', draft: 'reply', offer: null, breakable: false })
   eq('Enter on a thought -> noted', r(typed, { type: 'noteSaved' }), { kind: 'noted', offer: null })
   eq('noted clears to idle', r({ kind: 'noted', offer: null }, { type: 'dismiss' }), idle)
   eq('Escape from a thought -> idle', r(typed, { type: 'dismiss' }), idle)
@@ -46,25 +47,25 @@ export default function run(eq, { widgetReducer: r, sessionOf, holdsKeyboard, of
 
   // Session 7, bug 3: the timer running out mid capture lost the text.
   const done = { type: 'sessionCompleted', written: 2 }
-  eq('timer ends with text -> kept as a thought', r({ kind: 'capturing', session, draft: 'call mom' }, done), { kind: 'noting', draft: 'call mom', offer: null })
-  eq('timer ends, nothing typed -> finished, count kept', r({ kind: 'capturing', session, draft: '  ' }, done), { kind: 'finished', task: 'pyhton', written: 2 })
-  eq('timer ends mid rename with a thought -> the thought', r(fixed, done), { kind: 'noting', draft: 'call mom', offer: null })
-  eq('timer ends while running -> finished with its count', r(running, done), { kind: 'finished', task: 'pyhton', written: 2 })
-  eq('a session with nothing written finishes with 0', r(running, { type: 'sessionCompleted', written: 0 }), { kind: 'finished', task: 'pyhton', written: 0 })
+  eq('timer ends with text -> kept as a thought', r({ kind: 'capturing', session, draft: 'call mom' }, done), { kind: 'noting', draft: 'call mom', offer: null, breakable: false })
+  eq('timer ends, nothing typed -> finished, count kept', r({ kind: 'capturing', session, draft: '  ' }, done), { kind: 'finished', task: 'pyhton', written: 2, endedAt: ends })
+  eq('timer ends mid rename with a thought -> the thought', r(fixed, done), { kind: 'noting', draft: 'call mom', offer: null, breakable: false })
+  eq('timer ends while running -> finished with its count', r(running, done), { kind: 'finished', task: 'pyhton', written: 2, endedAt: ends })
+  eq('a session with nothing written finishes with 0', r(running, { type: 'sessionCompleted', written: 0 }), { kind: 'finished', task: 'pyhton', written: 0, endedAt: ends })
 
   // Session 7, bug 2: a warm start took over the shortcut. Now an offer.
   const offered = r(idle, { type: 'warmStart', offer })
   const noting = r(offered, { type: 'shortcut' })
   eq('warm start -> offered, nothing focused', offered, { kind: 'offered', offer })
   eq('warm start ignored unless idle', r(running, { type: 'warmStart', offer }), running)
-  eq('shortcut on an offer -> a thought, offer held', noting, { kind: 'noting', draft: '', offer })
+  eq('shortcut on an offer -> a thought, offer held', noting, { kind: 'noting', draft: '', offer, breakable: false })
   eq('first Tab from an empty thought -> the offer', r(noting, tab), { kind: 'starting', draft: 'loom video', plannedMin: 10 })
   eq('Tab after typing -> your text, default 25', run(noting, { type: 'edit', draft: 'new' }, tab), { kind: 'starting', draft: 'new', plannedMin: 25 })
   eq('a thought saved keeps the offer', run(noting, { type: 'edit', draft: 'x' }, { type: 'noteSaved' }, { type: 'dismiss' }), offered)
   eq('Escape from the thought -> still offered', r(noting, { type: 'dismiss' }), offered)
   eq('Escape from offered -> idle', r(offered, { type: 'dismiss' }), idle)
   eq('offer expires while offered -> idle', r(offered, { type: 'offerExpired' }), idle)
-  eq('offer expires mid thought -> thought kept', run(noting, { type: 'edit', draft: 'abc' }, { type: 'offerExpired' }), { kind: 'noting', draft: 'abc', offer: null })
+  eq('offer expires mid thought -> thought kept', run(noting, { type: 'edit', draft: 'abc' }, { type: 'offerExpired' }), { kind: 'noting', draft: 'abc', offer: null, breakable: false })
 
   // Helpers the widget leans on.
   eq('sessionOf(offered) is null', sessionOf(offered), null)
@@ -72,4 +73,20 @@ export default function run(eq, { widgetReducer: r, sessionOf, holdsKeyboard, of
   eq('offerOf(noting) is the offer', offerOf(noting), offer)
   eq('offered holds no keyboard', holdsKeyboard(offered), false)
   eq('renaming holds the keyboard', holdsKeyboard(fixed), true)
+
+  // Time past the end: the finished widget counts up from the planned end.
+  eq('finished carries the planned end', r(running, { type: 'sessionCompleted', written: 1 }).endedAt, ends)
+
+  // A break after a session: offered on the ring only right after one ends.
+  const after = r({ kind: 'finished', task: 'x', written: 0, endedAt: ends }, { type: 'shortcut' })
+  eq('after a session, Tab goes to the break', r(after, tab), { kind: 'pausing', draft: '', offer: null })
+  eq('break, Tab -> 25, draft kept', run(after, { type: 'edit', draft: 'hm' }, tab, tab), { kind: 'starting', draft: 'hm', plannedMin: 25 })
+  eq('no session just ended: no break on the ring', r(typed, tab), { kind: 'starting', draft: 'reply', plannedMin: 25 })
+  eq('Enter on the break starts it', r(r(after, tab), { type: 'breakStarted', endsAt: 99 }), { kind: 'onBreak', endsAt: 99 })
+  eq('break ends -> idle', r({ kind: 'onBreak', endsAt: 99 }, { type: 'breakEnded' }), idle)
+  eq('shortcut on a break ends it with a thought', r({ kind: 'onBreak', endsAt: 99 }, { type: 'shortcut' }), { kind: 'noting', draft: '', offer: null, breakable: false })
+  eq('Escape on the break choice -> idle', r(r(after, tab), { type: 'dismiss' }), idle)
+  eq('a break is not a session', sessionOf({ kind: 'onBreak', endsAt: 99 }), null)
+  eq('choosing the break keeps the keyboard', holdsKeyboard({ kind: 'pausing', draft: '', offer: null }), true)
+  eq('a running break does not', holdsKeyboard({ kind: 'onBreak', endsAt: 99 }), false)
 }

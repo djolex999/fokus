@@ -10,6 +10,7 @@ import { ReviewList } from './ReviewList'
 import { Asrs } from './Asrs'
 import { Stats } from './Stats'
 import { PrintSheet } from './PrintSheet'
+import { ShortcutSetting } from './ShortcutSetting'
 
 type Tab = 'captures' | 'questionnaire' | 'stats'
 
@@ -89,6 +90,8 @@ export function App(): JSX.Element {
         {tab === 'captures' && <ReviewList />}
         {tab === 'questionnaire' && <Asrs />}
         {tab === 'stats' && <Stats />}
+
+        <ShortcutSetting />
       </div>
 
       <PrintSheet stats={stats} asrs={asrs} />

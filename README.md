@@ -39,6 +39,10 @@ The Serbian rendering of the questionnaire is a translation, not the officially 
 
 The build is **not signed or notarised**, so the first launch needs: right-click the app → Open, or System Settings → Privacy & Security → Open Anyway.
 
+**After a session.** The widget counts time past the end (`+3:12`) instead of going blank, for up to an hour. The next shortcut press opens a thought as usual, and Tab also offers a five minute break: a countdown on the widget, never stored, never counted.
+
+**Your own shortcut.** The one setting: at the foot of the main window, *change* and press a new combination. It needs Cmd, Ctrl or Alt, and refuses everyday ones like Cmd+W. If another app holds it, the old one stays.
+
 **Hide instead of quitting.** The tray's *Hide until tomorrow* takes the widget off screen while the shortcut keeps working; it comes back after a long break (the Mac asleep three hours or more) or a day later. Quitting stops the shortcut until fokus is opened again.
 
 **Start it at login.** The shortcut only works while fokus is running, and it does not add itself to your login items: registering one makes macOS show a notification, and an app built to avoid interruptions should not cause one. Once, by hand:

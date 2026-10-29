@@ -41,7 +41,13 @@ export type WidgetState =
   | { kind: 'offered'; offer: Offer }
   /** The shortcut with no session running: a thought, written down without
    *  one. Tab moves to `starting`, to the offer first if there is one. */
-  | { kind: 'noting'; draft: string; offer: Offer | null }
+  /** `breakable`: a session has just ended, so the ring offers a break. */
+  | { kind: 'noting'; draft: string; offer: Offer | null; breakable: boolean }
+  /** The break chosen on the ring; Enter starts it. The input stays, so a
+   *  thought typed before Tab is not lost. */
+  | { kind: 'pausing'; draft: string; offer: Offer | null }
+  /** A break counting down. Not a session: never stored, never counted. */
+  | { kind: 'onBreak'; endsAt: number }
   /** One second of "written down" after a thought saved outside a session. No
    *  number: the return counter counts returns within a session. */
   | { kind: 'noted'; offer: Offer | null }
@@ -55,9 +61,10 @@ export type WidgetState =
   /** Back after five minutes or more away: the task, and the last three things
    *  captured, so the thread can be picked up without opening anything. */
   | { kind: 'resumed'; session: RunningSession; recent: string[] }
-  /** The countdown reached zero. Shows 0:00 until the next shortcut press or
-   *  `FINISHED_MS` passes, whichever is first. */
-  | { kind: 'finished'; task: string; written: number }
+  /** The countdown reached zero. Counts time past the end ("+3:12") until the
+   *  next shortcut press or `FINISHED_MS` passes, whichever is first. */
+  /** `endedAt` is the planned end, so the widget can count time past it. */
+  | { kind: 'finished'; task: string; written: number; endedAt: number }
 
 export type WidgetAction =
   | { type: 'shortcut' }
@@ -70,6 +77,8 @@ export type WidgetAction =
   | { type: 'cycle' }
   | { type: 'noteSaved' }
   | { type: 'renamed'; task: string }
+  | { type: 'breakStarted'; endsAt: number }
+  | { type: 'breakEnded' }
   | { type: 'sessionStarted'; session: RunningSession }
   | { type: 'captureConfirmed'; returnNumber: number }
   | { type: 'captureDismissed' }
@@ -85,6 +94,7 @@ export type WidgetAction =
 export function holdsKeyboard(state: WidgetState): boolean {
   switch (state.kind) {
     case 'noting':
+    case 'pausing':
     case 'starting':
     case 'capturing':
     case 'renaming':
@@ -92,6 +102,7 @@ export function holdsKeyboard(state: WidgetState): boolean {
       return true
     case 'idle':
     case 'offered':
+    case 'onBreak':
     case 'noted':
     case 'running':
     case 'confirmed':
@@ -122,7 +133,8 @@ export function selectsOnFocus(before: WidgetState, after: WidgetState): boolean
   ) {
     return true
   }
-  const ring = (k: WidgetState['kind']): boolean => k === 'noting' || k === 'starting'
+  const ring = (k: WidgetState['kind']): boolean =>
+    k === 'noting' || k === 'pausing' || k === 'starting'
   const carried =
     before.kind === after.kind ||
     (ring(before.kind) && ring(after.kind)) ||
@@ -162,6 +174,8 @@ export function sessionOf(state: WidgetState): RunningSession | null {
     case 'idle':
     case 'offered':
     case 'noting':
+    case 'pausing':
+    case 'onBreak':
     case 'noted':
     case 'starting':
     case 'finished':
@@ -209,11 +223,14 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         // session start, so the capture habit, typed with no session, produced
         // a session named after the thought.
         case 'idle':
+        case 'onBreak':
+          return { kind: 'noting', draft: '', offer: null, breakable: false }
+        // Right after a session the ring also offers a break.
         case 'finished':
-          return { kind: 'noting', draft: '', offer: null }
+          return { kind: 'noting', draft: '', offer: null, breakable: true }
         case 'offered':
         case 'noted':
-          return { kind: 'noting', draft: '', offer: state.offer }
+          return { kind: 'noting', draft: '', offer: state.offer, breakable: false }
         case 'running':
           return { kind: 'capturing', session: state.session, draft: '' }
         case 'confirmed':
@@ -223,6 +240,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         // Firing again mid typing keeps the draft: the shortcut can be pressed
         // twice before the window is up.
         case 'noting':
+        case 'pausing':
         case 'starting':
         case 'capturing':
         case 'renaming':
@@ -231,6 +249,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       break
     case 'edit':
       if (state.kind === 'noting') return { ...state, draft: action.draft }
+      if (state.kind === 'pausing') return { ...state, draft: action.draft }
       if (state.kind === 'starting') return { ...state, draft: action.draft }
       if (state.kind === 'capturing') return { ...state, draft: action.draft }
       if (state.kind === 'renaming') return { ...state, draft: action.draft }
@@ -262,7 +281,10 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       if (state.kind === 'renaming') {
         return { kind: 'capturing', session: state.session, draft: state.thought }
       }
-      if (state.kind === 'noting') {
+      if (state.kind === 'noting' && state.breakable) {
+        return { kind: 'pausing', draft: state.draft, offer: state.offer }
+      }
+      if (state.kind === 'noting' || state.kind === 'pausing') {
         // Nothing typed and something on offer: the first Tab is the offer.
         // Typed text means a new task, so it starts from the default instead.
         if (state.offer !== null && state.draft.trim() === '') {
@@ -273,11 +295,15 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       if (state.kind !== 'starting') return state
       const next = afterDuration(state.plannedMin)
       return next === null
-        ? { kind: 'noting', draft: state.draft, offer: null }
+        ? { kind: 'noting', draft: state.draft, offer: null, breakable: false }
         : { ...state, plannedMin: next }
     }
     case 'noteSaved':
       return state.kind === 'noting' ? { kind: 'noted', offer: state.offer } : state
+    case 'breakStarted':
+      return state.kind === 'pausing' ? { kind: 'onBreak', endsAt: action.endsAt } : state
+    case 'breakEnded':
+      return state.kind === 'onBreak' ? { kind: 'idle' } : state
     case 'renamed': {
       if (state.kind !== 'renaming') return state
       const session = { ...state.session, task: action.task }
@@ -339,11 +365,18 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       // Enter still writes it down and nothing typed is lost to a timer.
       const unsaved =
         state.kind === 'capturing' ? state.draft : state.kind === 'renaming' ? state.thought : ''
-      if (unsaved.trim() !== '') return { kind: 'noting', draft: unsaved, offer: null }
+      if (unsaved.trim() !== '') {
+        return { kind: 'noting', draft: unsaved, offer: null, breakable: false }
+      }
       const session = sessionOf(state)
       return session === null
         ? { kind: 'idle' }
-        : { kind: 'finished', task: session.task, written: action.written }
+        : {
+            kind: 'finished',
+            task: session.task,
+            written: action.written,
+            endedAt: Date.parse(session.startedAt) + session.plannedMin * 60_000,
+          }
     }
     case 'sessionAbandoned':
       return { kind: 'idle' }
@@ -355,6 +388,7 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         case 'noted':
           return rest(state.offer)
         case 'starting':
+        case 'pausing':
         case 'finished':
         case 'offered':
           return { kind: 'idle' }

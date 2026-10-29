@@ -28,6 +28,12 @@ export function report(message: string): void {
 
 /** Asked for rather than hardcoded: the side that registers the shortcut is the
  *  side that gets to name it. */
+/** Registers `accelerator` in place of the current shortcut and returns its
+ *  label. Rejects, with the old one still registered, if it cannot. */
+export async function changeShortcut(accelerator: string): Promise<string> {
+  return invoke<string>('set_shortcut', { accelerator })
+}
+
 export async function shortcutLabel(): Promise<string> {
   return invoke<string>('shortcut_label')
 }

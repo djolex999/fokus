@@ -96,7 +96,9 @@ One explicit union in `src/types/session.ts`, not a set of booleans (they can ov
 type WidgetState =
   | { kind: 'idle' }
   | { kind: 'offered'; offer: Offer }                      // idle, a stopped session behind Tab
-  | { kind: 'noting'; draft: string; offer: Offer | null } // shortcut, no session: a thought
+  | { kind: 'noting'; draft: string; offer: Offer | null; breakable: boolean } // shortcut, no session: a thought
+  | { kind: 'pausing'; draft: string; offer: Offer | null } // the break chosen on the ring
+  | { kind: 'onBreak'; endsAt: number }                     // 5 min, never stored or counted
   | { kind: 'noted'; offer: Offer | null }                 // "written down", clears after 1s
   | { kind: 'starting'; draft: string; plannedMin: PlannedMinutes }
   | { kind: 'running'; session: RunningSession }
@@ -104,10 +106,10 @@ type WidgetState =
   | { kind: 'renaming'; session: RunningSession; draft: string; thought: string }  // Tab from capture
   | { kind: 'confirmed'; session: RunningSession; returnNumber: number }  // clears after 1s
   | { kind: 'resumed'; session: RunningSession; recent: string[] }       // clears on next input
-  | { kind: 'finished'; task: string; written: number };   // written: the session's capture count, read as it ends
+  | { kind: 'finished'; task: string; written: number; endedAt: number }; // counts time past endedAt
 ```
 
-With no session running, the shortcut means capture, including when a warm start is on offer. Tab cycles thought → 25 → 50 → 10 → thought; from an empty thought with an offer, the first Tab is the offered task and its duration. Offers expire with the warm start window. During a session, Tab swaps capture and renaming the task.
+With no session running, the shortcut means capture, including when a warm start is on offer. Tab cycles thought → 25 → 50 → 10 → thought; from an empty thought with an offer, the first Tab is the offered task and its duration. Offers expire with the warm start window. During a session, Tab swaps capture and renaming the task. Right after a session, the ring also offers a break: thought → break → 25 → 50 → 10. The shortcut, the one setting, is stored as the plugin's string in `shortcut.json` in the app config dir; a saved one that cannot be registered falls back to the default.
 
 ## Copy
 
@@ -129,3 +131,15 @@ Never use em dashes in UI copy or in text written for the user to publish (posts
 - If an idea comes up mid-build that is not in the current session's scope: append one line to `IDEJE.md`, do not implement it. This is the paper version of the capture loop.
 - If a constraint above blocks an approach, stop and say so rather than working around it.
 
+<!-- VIR:START -->
+<!-- vir-last-updated: 2026-10-06 -->
+
+## Distilled Knowledge (from Vir)
+
+### Patterns
+- pattern/fokus-gamification-working-rule (conf 0.85) — fokus-gamification-working-rule
+
+### Gotchas
+- gotcha/macos-desktop-focus-geometry-platform-complexity (conf 0.80) — macos-desktop-focus-geometry-platform-complexity
+
+<!-- VIR:END -->

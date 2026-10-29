@@ -56,13 +56,17 @@ const QUIT_EVENT = 'app:quit'
 const MUSIC_EVENT = 'audio:enabled'
 const HIDE_TOGGLE_EVENT = 'widget:hide-toggle'
 const PULSE_EVENT = 'widget:pulse'
+const SHORTCUT_CHANGED_EVENT = 'shortcut:changed'
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 const SESSIONS_CLEARED_EVENT = 'sessions:cleared'
 const CONFIRMATION_MS = 1000
 /** How long the widget holds at 0:00 after a session ends. Long enough to be
  *  seen if you look up; short enough that it never becomes a stale 0:00 with no
  *  timestamp, which says nothing about whether it happened now or an hour ago. */
-const FINISHED_MS = 60_000
+// Long enough to read time past the end as it grows ("+12:40"), short enough
+// that an evening's last session does not sit there all night.
+const FINISHED_MS = 60 * 60_000
+const BREAK_MS = 5 * 60_000
 /** Re-render only. The remaining time is computed from the wall clock, so a
  *  missed or delayed tick costs nothing but a stale frame. */
 const TICK_MS = 1000
@@ -171,6 +175,7 @@ export function CaptureWidget(): JSX.Element {
       state.kind === 'idle' ||
       state.kind === 'offered' ||
       state.kind === 'running' ||
+      state.kind === 'onBreak' ||
       state.kind === 'finished'
     if (!resting) return
     setWidgetHidden(true).catch((e: unknown) =>
@@ -437,6 +442,11 @@ export function CaptureWidget(): JSX.Element {
     if (offer !== null && now >= Date.parse(offer.expiresAt)) dispatch({ type: 'offerExpired' })
   }, [state, now])
 
+  // A break ends the same way a session does, from the wall clock, silently.
+  useEffect(() => {
+    if (state.kind === 'onBreak' && now >= state.endsAt) dispatch({ type: 'breakEnded' })
+  }, [state, now])
+
   // The countdown running out ends the session. Derived from the wall clock, so
   // this fires correctly on the first tick after the machine wakes from sleep.
   useEffect(() => {
@@ -481,6 +491,8 @@ export function CaptureWidget(): JSX.Element {
         else showWidget()
       }),
       listen(PULSE_EVENT, () => beat(Date.now())),
+      // Changed in the main window: reprint the hint here at once.
+      listen<string>(SHORTCUT_CHANGED_EVENT, (event) => setShortcut(event.payload)),
       listen<boolean>(MUSIC_EVENT, (event) => {
         if (event.payload) {
           if (sessionOf(stateRef.current) !== null) startAudio()
@@ -611,6 +623,26 @@ export function CaptureWidget(): JSX.Element {
     [returnFocus, stopAudio],
   )
 
+  /** The break chosen on the ring. A thought typed before Tab is written down
+   *  first, so choosing a break never costs it. */
+  const commitBreak = useCallback(
+    async (draft: string): Promise<void> => {
+      const text = draft.trim()
+      if (text !== '') {
+        try {
+          await insertCapture(null, text)
+        } catch (e: unknown) {
+          setError(failure(t.errNotSaved, e))
+          return
+        }
+        void emit(CAPTURES_CHANGED_EVENT)
+      }
+      dispatch({ type: 'breakStarted', endsAt: Date.now() + BREAK_MS })
+      await returnFocus()
+    },
+    [returnFocus],
+  )
+
   /** A thought with no session running. Same path as a capture, less the
    *  session: the row, then the acknowledgement, then focus back. */
   const commitNote = useCallback(
@@ -726,6 +758,7 @@ export function CaptureWidget(): JSX.Element {
         event.key === 'Tab' &&
         (current.kind === 'starting' ||
           current.kind === 'noting' ||
+          current.kind === 'pausing' ||
           current.kind === 'capturing' ||
           current.kind === 'renaming' ||
           current.kind === 'resumed')
@@ -740,6 +773,10 @@ export function CaptureWidget(): JSX.Element {
         if (current.kind === 'noting') {
           void mark('enter pressed')
           commitOnce(() => commitNote(current.draft))
+          return
+        }
+        if (current.kind === 'pausing') {
+          commitOnce(() => commitBreak(current.draft))
           return
         }
         if (current.kind === 'renaming') {
@@ -768,7 +805,7 @@ export function CaptureWidget(): JSX.Element {
         event.preventDefault()
         // Timing only. Lets the round trip be measured without writing rows.
         void mark('escape pressed')
-        if (current.kind === 'starting' || current.kind === 'noting') {
+        if (current.kind === 'starting' || current.kind === 'noting' || current.kind === 'pausing') {
           dispatch({ type: 'dismiss' })
         } else if (
           current.kind === 'capturing' ||
@@ -780,7 +817,16 @@ export function CaptureWidget(): JSX.Element {
         void returnFocus()
       }
     },
-    [beginSession, commitCapture, commitNote, commitOnce, commitRename, returnFocus, startAudio],
+    [
+      beginSession,
+      commitBreak,
+      commitCapture,
+      commitNote,
+      commitOnce,
+      commitRename,
+      returnFocus,
+      startAudio,
+    ],
   )
 
   const onChange = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
@@ -817,10 +863,13 @@ export function CaptureWidget(): JSX.Element {
  * running, remembering which mode you are in is exactly the kind of invisible
  * bookkeeping this app exists to remove.
  */
-function choiceRow(active: 'thought' | PlannedMinutes): JSX.Element {
+function choiceRow(active: 'thought' | 'pause' | PlannedMinutes, withPause: boolean): JSX.Element {
   return (
     <div className="durations" data-tauri-drag-region>
       <span className={active === 'thought' ? 'duration active' : 'duration'}>{t.thought}</span>
+      {withPause && (
+        <span className={active === 'pause' ? 'duration active' : 'duration'}>{t.pause}</span>
+      )}
       {DURATIONS.map((minutes) => (
         <span key={minutes} className={active === minutes ? 'duration active' : 'duration'}>
           {minutes}
@@ -874,7 +923,7 @@ function renderBody(
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          {choiceRow(state.plannedMin)}
+          {choiceRow(state.plannedMin, false)}
         </>
       )
 
@@ -892,7 +941,38 @@ function renderBody(
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          {choiceRow('thought')}
+          {choiceRow('thought', state.breakable)}
+        </>
+      )
+
+    case 'pausing':
+      return (
+        <>
+          <input
+            ref={inputRef}
+            className="capture-input"
+            type="text"
+            value={state.draft}
+            placeholder={t.capturePlaceholder}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+          {choiceRow('pause', true)}
+        </>
+      )
+
+    case 'onBreak':
+      return (
+        <>
+          <div className="timer-row" data-tauri-drag-region>
+            <span className="timer">
+              {formatCountdown(Math.max(0, Math.ceil((state.endsAt - now) / 1000)))}
+            </span>
+            <span className="ends">{t.pause}</span>
+          </div>
+          <div className="secondary" data-tauri-drag-region />
         </>
       )
 
@@ -1011,7 +1091,10 @@ function renderBody(
       return (
         <>
           <div className="timer-row" data-tauri-drag-region>
-            <span className="timer">0:00</span>
+            {/* Time past the end, counting up. Shown, never announced. */}
+            <span className="timer">
+              +{formatCountdown(Math.max(0, Math.floor((now - state.endedAt) / 1000)))}
+            </span>
             {state.written > 0 && (
               <span className="ends">{fill(t.finishedWritten, { n: state.written })}</span>
             )}

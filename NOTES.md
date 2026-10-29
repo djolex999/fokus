@@ -1346,3 +1346,37 @@ few seconds, would take the next real thought.
 
 **Unverified by hand at commit:** the round trip (measurement set up, no runs
 yet), hiding, the review list keys, copy, the fade.
+
+## The last three from the brainstorm
+
+2026-10-29. Decided one at a time; "next step at the finish" was not built
+because it already works: shortcut on the finished widget, type, Tab, and the
+text is the next session's task.
+
+**Time past the end.** The finished widget counts up from the planned end,
+`+3:12`, and holds for an hour instead of a minute: long enough to read, short
+enough that a night's last session does not sit there till morning. `finished`
+carries `endedAt`, computed in the reducer from the session, so the count is
+derived like everything else on the widget.
+
+**A break after a session.** On the ring only right after a session ends
+(`noting.breakable`), between the thought and 25. `pausing` is the break chosen,
+input still showing; Enter writes any half typed thought down first, then starts
+five minutes of `onBreak`. Never stored and never counted: it is not a session
+and must not move the statistics or the printed page. Ends silently from the
+wall clock; the shortcut during one ends it with a thought.
+
+**Changing the shortcut,** the one setting CLAUDE.md allows. Recorded in the
+main window from `KeyboardEvent.code`, which is already the Rust parser's key
+vocabulary and follows the physical key across layouts. Refused before Rust is
+asked: no Cmd, Ctrl or Alt (it would fire while typing), and Cmd or Ctrl alone
+with a letter or digit (taking Cmd+W globally breaks it in every app). Rust
+unregisters the old one, tries the new one, and if the system refuses puts the
+old one back before returning, so there is never a moment with no shortcut.
+Saved as the plugin's own string in `shortcut.json`; at startup a saved shortcut
+that has since been taken falls back to the default. The handler no longer
+compares against a fixed shortcut: only one is ever registered.
+
+Checked: 115 node checks (54 reducer, 14 selection, 11 shortcut among them), 11
+Rust tests (label matches the docs, the stored form reads back, modifier rule).
+Not exercised by hand: any of the three, or the earlier batch.

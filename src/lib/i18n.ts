@@ -107,6 +107,15 @@ type Strings = {
   errBackupThisMinute: string
   /** Finished widget, beside 0:00: how many thoughts the session caught. */
   finishedWritten: string
+  /** On the ring after a session, and on the widget while one runs. */
+  pause: string
+  shortcutName: string
+  shortcutChange: string
+  shortcutRecording: string
+  errShortcutModifier: string
+  errShortcutEveryday: string
+  errShortcutTaken: string
+  errShortcutNotSet: string
   /** Review list keys, matching the first letter of each action's label. */
   keyDone: string
   keySchedule: string
@@ -197,6 +206,14 @@ const sr: Strings = {
   errNotPrinted: 'štampanje se nije otvorilo',
   errBackupThisMinute: 'kopija iz ovog minuta već postoji, probaj za minut',
   finishedWritten: '{n} zapisano',
+  pause: 'pauza',
+  shortcutName: 'prečica',
+  shortcutChange: 'promeni',
+  shortcutRecording: 'pritisni novu kombinaciju, Esc otkazuje',
+  errShortcutModifier: 'treba Cmd, Ctrl ili Alt',
+  errShortcutEveryday: 'to je obična prečica u aplikacijama, izaberi drugu',
+  errShortcutTaken: 'zauzeta, ostaje stara',
+  errShortcutNotSet: 'prečica nije promenjena',
   keyDone: 'u',
   keySchedule: 'z',
   keyDelete: 'o',
@@ -283,6 +300,14 @@ const en: Strings = {
   errNotPrinted: 'printing did not open',
   errBackupThisMinute: 'a backup from this minute already exists, try again in a minute',
   finishedWritten: '{n} written down',
+  pause: 'break',
+  shortcutName: 'shortcut',
+  shortcutChange: 'change',
+  shortcutRecording: 'press the new combination, Esc cancels',
+  errShortcutModifier: 'needs Cmd, Ctrl or Alt',
+  errShortcutEveryday: 'that is an everyday app shortcut, pick another',
+  errShortcutTaken: 'taken, the old one stays',
+  errShortcutNotSet: 'shortcut not changed',
   keyDone: 'd',
   keySchedule: 's',
   keyDelete: 'x',

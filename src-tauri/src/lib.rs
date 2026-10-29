@@ -1,4 +1,5 @@
 mod backup;
+mod shortcut;
 mod db;
 mod focus;
 mod window_pos;
@@ -9,7 +10,7 @@ use std::time::Instant;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State};
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 const WIDGET_LABEL: &str = "widget";
 const MAIN_LABEL: &str = "main";
@@ -533,35 +534,6 @@ fn restore_focus(app: AppHandle, state: State<'_, FokusState>) -> Result<(), Str
     result
 }
 
-fn capture_shortcut() -> Shortcut {
-    #[cfg(target_os = "macos")]
-    {
-        Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Space)
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space)
-    }
-}
-
-/// What the widget prints when idle.
-///
-/// Lives beside the registration rather than in the frontend, which had it
-/// hardcoded as the macOS chord. Two places naming one shortcut is one place too
-/// many, and the copy that was wrong would have told Windows users to press a
-/// key their keyboard does not have.
-#[tauri::command]
-fn shortcut_label() -> &'static str {
-    #[cfg(target_os = "macos")]
-    {
-        "⌘⇧Space"
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        "Ctrl+Shift+Space"
-    }
-}
-
 pub fn run() {
     tauri::Builder::default()
         .plugin(
@@ -577,7 +549,8 @@ pub fn run() {
             quit_app,
             reset_music,
             set_menu_labels,
-            shortcut_label,
+            shortcut::shortcut_label,
+            shortcut::set_shortcut,
             audio_track,
             set_widget_height,
             backup::backup_target,
@@ -637,17 +610,30 @@ pub fn run() {
                 });
             }
 
-            let shortcut = capture_shortcut();
+            // Only the capture shortcut is ever registered, so any press is it.
+            // Compared against nothing on purpose: it can change while running.
             app.handle().plugin(
                 tauri_plugin_global_shortcut::Builder::new()
-                    .with_handler(move |handle, fired, event| {
-                        if fired == &shortcut && event.state() == ShortcutState::Pressed {
+                    .with_handler(|handle, _fired, event| {
+                        if event.state() == ShortcutState::Pressed {
                             open_capture(handle);
                         }
                     })
                     .build(),
             )?;
-            app.global_shortcut().register(capture_shortcut())?;
+            // The saved shortcut, falling back to the default if something else
+            // took it since. Never starts without one.
+            let saved = shortcut::load(app.handle());
+            let registered = match app.global_shortcut().register(saved) {
+                Ok(()) => saved,
+                Err(e) => {
+                    eprintln!("[fokus] saved shortcut unavailable ({e}), using the default");
+                    let fallback = shortcut::default_shortcut();
+                    app.global_shortcut().register(fallback)?;
+                    fallback
+                }
+            };
+            app.manage(shortcut::Current(Mutex::new(registered)));
 
             Ok(())
         })

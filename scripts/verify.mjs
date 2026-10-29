@@ -102,6 +102,10 @@ function checker(suite) {
 
 try {
   compile([join(root, 'src', 'types', 'session.ts'), join(root, 'src', 'types', 'stats.ts')], out)
+  // A separate compile per source folder: given two, tsc mirrors the tree.
+  const libDir = join(out, 'lib')
+  mkdirSync(libDir)
+  compile([join(root, 'src', 'lib', 'shortcut.ts')], libDir)
   const backupDir = join(out, 'backup')
   mkdirSync(backupDir)
   stageBackup(backupDir)
@@ -112,6 +116,7 @@ try {
 
   const session = await import(pathToFileURL(join(out, 'session.js')).href)
   const stats = await import(pathToFileURL(join(out, 'stats.js')).href)
+  const shortcut = await import(pathToFileURL(join(libDir, 'shortcut.js')).href)
   const backup = {
     module: await import(pathToFileURL(join(backupDir, 'backup.js')).href),
     db: await import(pathToFileURL(join(backupDir, 'db.js')).href),
@@ -124,6 +129,7 @@ try {
     ['visibility', './verify/visibility.mjs', session],
     ['stats', './verify/stats.mjs', stats],
     ['backup', './verify/backup.mjs', backup],
+    ['shortcut', './verify/shortcut.mjs', shortcut],
   ]
   for (const [name, path, target] of suites) {
     const [t0, f0] = [total, failed]
