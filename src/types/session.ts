@@ -57,7 +57,7 @@ export type WidgetState =
   | { kind: 'resumed'; session: RunningSession; recent: string[] }
   /** The countdown reached zero. Shows 0:00 until the next shortcut press or
    *  `FINISHED_MS` passes, whichever is first. */
-  | { kind: 'finished'; task: string }
+  | { kind: 'finished'; task: string; written: number }
 
 export type WidgetAction =
   | { type: 'shortcut' }
@@ -73,7 +73,9 @@ export type WidgetAction =
   | { type: 'sessionStarted'; session: RunningSession }
   | { type: 'captureConfirmed'; returnNumber: number }
   | { type: 'captureDismissed' }
-  | { type: 'sessionCompleted' }
+  /** `written` is the session's capture count, read from the database as it
+   *  ends, so the finished widget can say it without storing a counter. */
+  | { type: 'sessionCompleted'; written: number }
   | { type: 'sessionAbandoned' }
   | { type: 'dismiss' }
 
@@ -127,6 +129,25 @@ export function selectsOnFocus(before: WidgetState, after: WidgetState): boolean
     ((before.kind === 'renaming' || before.kind === 'resumed') && after.kind === 'capturing') ||
     ((before.kind === 'capturing' || before.kind === 'renaming') && after.kind === 'noting')
   return !carried
+}
+
+/** A gap this long between two beats means the Mac was asleep, which is the
+ *  long break that brings a hidden widget back. */
+export const REAPPEAR_AFTER_SLEEP_MS = 3 * 60 * 60 * 1000
+/** And never hidden longer than this, for a Mac that does not sleep. */
+export const REAPPEAR_AFTER_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Whether a widget hidden with "Hide until tomorrow" comes back on its own.
+ * "Tomorrow" is read as after a long break, not a fixed hour: sessions here run
+ * at night as often as by day, and a 06:00 return would bring it back three
+ * hours after a 03:00 hide. Beats come from the widget's tick and, while
+ * hidden, a once a minute pulse from Rust, so a gap between two of them is time
+ * the Mac spent asleep.
+ */
+export function shouldReappear(hiddenAt: number, previousBeat: number, now: number): boolean {
+  if (now < previousBeat) return false
+  return now - previousBeat >= REAPPEAR_AFTER_SLEEP_MS || now - hiddenAt >= REAPPEAR_AFTER_MS
 }
 
 /** The session the widget is currently attached to, if any. */
@@ -320,7 +341,9 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
         state.kind === 'capturing' ? state.draft : state.kind === 'renaming' ? state.thought : ''
       if (unsaved.trim() !== '') return { kind: 'noting', draft: unsaved, offer: null }
       const session = sessionOf(state)
-      return session === null ? { kind: 'idle' } : { kind: 'finished', task: session.task }
+      return session === null
+        ? { kind: 'idle' }
+        : { kind: 'finished', task: session.task, written: action.written }
     }
     case 'sessionAbandoned':
       return { kind: 'idle' }

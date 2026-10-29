@@ -104,7 +104,7 @@ type WidgetState =
   | { kind: 'renaming'; session: RunningSession; draft: string; thought: string }  // Tab from capture
   | { kind: 'confirmed'; session: RunningSession; returnNumber: number }  // clears after 1s
   | { kind: 'resumed'; session: RunningSession; recent: string[] }       // clears on next input
-  | { kind: 'finished'; task: string };
+  | { kind: 'finished'; task: string; written: number };   // written: the session's capture count, read as it ends
 ```
 
 With no session running, the shortcut means capture, including when a warm start is on offer. Tab cycles thought → 25 → 50 → 10 → thought; from an empty thought with an offer, the first Tab is the offered task and its duration. Offers expire with the warm start window. During a session, Tab swaps capture and renaming the task.
@@ -128,3 +128,4 @@ Never use em dashes in UI copy or in text written for the user to publish (posts
 - Platform-specific code must compile on both platforms before it is committed. CI does this on every push. `RunEvent::Reopen` reached a Windows machine because checks ran on macOS only, and an isolated type-check of `focus.rs` reported success while `lib.rs` was never in it.
 - If an idea comes up mid-build that is not in the current session's scope: append one line to `IDEJE.md`, do not implement it. This is the paper version of the capture loop.
 - If a constraint above blocks an approach, stop and say so rather than working around it.
+

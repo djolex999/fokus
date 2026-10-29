@@ -50,6 +50,17 @@ body {
   backdrop-filter: blur(20px);
 }
 
+/* Resting, with nothing running, the widget steps back: present enough to be
+   found, quiet enough not to be the reason it gets quit. Full on hover, and
+   whenever anything is happening. No transition; nothing here animates. */
+.widget.resting {
+  opacity: 0.45;
+}
+
+.widget.resting:hover {
+  opacity: 1;
+}
+
 /* Every state is a strong primary line over a quiet secondary line. Keeping
    that skeleton fixed is what stops the widget twitching as it changes state. */
 .primary {

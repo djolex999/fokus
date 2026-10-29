@@ -10,6 +10,7 @@ import {
   holdsKeyboard,
   offerOf,
   selectsOnFocus,
+  shouldReappear,
   formatEndTime,
   partitionOpenSessions,
   remainingSeconds,
@@ -45,6 +46,7 @@ import {
   restoreFocus,
   shortcutLabel,
   setMenuLabels,
+  setWidgetHidden,
   setWidgetHeight,
 } from '../lib/ipc'
 
@@ -52,6 +54,8 @@ const SHORTCUT_EVENT = 'capture:open'
 const ABANDON_EVENT = 'session:abandon'
 const QUIT_EVENT = 'app:quit'
 const MUSIC_EVENT = 'audio:enabled'
+const HIDE_TOGGLE_EVENT = 'widget:hide-toggle'
+const PULSE_EVENT = 'widget:pulse'
 const CAPTURES_CHANGED_EVENT = 'captures:changed'
 const SESSIONS_CLEARED_EVENT = 'sessions:cleared'
 const CONFIRMATION_MS = 1000
@@ -97,6 +101,43 @@ export function CaptureWidget(): JSX.Element {
   const [state, dispatch] = useReducer(widgetReducer, initialState)
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState<number>(() => Date.now())
+
+  // "Hide until tomorrow". When it was hidden, or null while shown. A ref beside
+  // the state, because the tray and pulse listeners are registered once and
+  // would otherwise read the value from when they were.
+  const [hiddenSince, setHiddenSince] = useState<number | null>(null)
+  const hiddenSinceRef = useRef<number | null>(null)
+  const lastBeat = useRef<number>(Date.now())
+
+  const showWidget = useCallback((): void => {
+    hiddenSinceRef.current = null
+    setHiddenSince(null)
+    setWidgetHidden(false).catch((e: unknown) =>
+      report(`could not show widget: ${describeError(e)}`),
+    )
+  }, [])
+
+  const hideWidget = useCallback((): void => {
+    const at = Date.now()
+    hiddenSinceRef.current = at
+    lastBeat.current = at
+    setHiddenSince(at)
+    setWidgetHidden(true).catch((e: unknown) =>
+      report(`could not hide widget: ${describeError(e)}`),
+    )
+  }, [])
+
+  // Every tick and every pulse is a beat. A long gap between two beats is the
+  // Mac having slept, which is the long break that brings the widget back.
+  const beat = useCallback(
+    (at: number): void => {
+      const previous = lastBeat.current
+      lastBeat.current = at
+      const since = hiddenSinceRef.current
+      if (since !== null && shouldReappear(since, previous, at)) showWidget()
+    },
+    [showWidget],
+  )
   /** Bumped on every shortcut press so the focus effect re-runs even when the
    *  state it lands in is the one it was already in. */
   const [focusTick, setFocusTick] = useState(0)
@@ -116,6 +157,26 @@ export function CaptureWidget(): JSX.Element {
     const timer = window.setInterval(() => setNow(Date.now()), TICK_MS)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    beat(now)
+  }, [now, beat])
+
+  // Hidden, the shortcut still brings the widget up for a capture. Once that is
+  // over and the widget is back to resting, it goes back out of sight. The
+  // one second acknowledgements are left to finish first.
+  useEffect(() => {
+    if (hiddenSince === null) return
+    const resting =
+      state.kind === 'idle' ||
+      state.kind === 'offered' ||
+      state.kind === 'running' ||
+      state.kind === 'finished'
+    if (!resting) return
+    setWidgetHidden(true).catch((e: unknown) =>
+      report(`could not re-hide widget: ${describeError(e)}`),
+    )
+  }, [hiddenSince, state.kind])
 
   // --- audio -------------------------------------------------------------
   // Absence is silence, never an error: no folder, an empty folder, or nothing
@@ -247,6 +308,8 @@ export function CaptureWidget(): JSX.Element {
         musicPlay: t.trayMusicPlay,
         musicFolder: t.trayMusicFolder,
         backupsFolder: t.trayBackupsFolder,
+        hideWidget: t.trayHideWidget,
+        showWidget: t.trayShowWidget,
         quit: t.trayQuit,
       }).catch((e: unknown) => report(`could not set menu labels: ${describeError(e)}`))
 
@@ -318,10 +381,25 @@ export function CaptureWidget(): JSX.Element {
     }
   }, [])
 
+  // The timer effect calls this every tick while the clock reads zero, and the
+  // count below is an await. Without a guard a second call could land after
+  // the first had finished the widget, and finishing a finished widget idles it.
+  const finishing = useRef(false)
   const finishSession = useCallback(
     async (session: RunningSession, outcome: 'completed' | 'abandoned'): Promise<void> => {
+      if (finishing.current) return
+      finishing.current = true
+      let written = 0
+      if (outcome === 'completed') {
+        try {
+          written = await countCaptures(session.id)
+        } catch (e: unknown) {
+          report(`could not count the session's captures: ${describeError(e)}`)
+        }
+      }
+      finishing.current = false
       const action: WidgetAction =
-        outcome === 'completed' ? { type: 'sessionCompleted' } : { type: 'sessionAbandoned' }
+        outcome === 'completed' ? { type: 'sessionCompleted', written } : { type: 'sessionAbandoned' }
       // Asked of the reducer rather than restated here: if the widget had the
       // keyboard and the session ending leaves nothing to type into, focus goes
       // back. A thought carried into noting keeps it, since it is being typed.
@@ -398,6 +476,11 @@ export function CaptureWidget(): JSX.Element {
 
     const subscriptions: Array<Promise<UnlistenFn>> = [
       listen(SHORTCUT_EVENT, onShortcut),
+      listen(HIDE_TOGGLE_EVENT, () => {
+        if (hiddenSinceRef.current === null) hideWidget()
+        else showWidget()
+      }),
+      listen(PULSE_EVENT, () => beat(Date.now())),
       listen<boolean>(MUSIC_EVENT, (event) => {
         if (event.payload) {
           if (sessionOf(stateRef.current) !== null) startAudio()
@@ -437,7 +520,7 @@ export function CaptureWidget(): JSX.Element {
         pending.then((unlisten) => unlisten()).catch(() => undefined)
       }
     }
-  }, [finishSession, touch, startAudio, stopAudio])
+  }, [finishSession, touch, startAudio, stopAudio, hideWidget, showWidget, beat])
 
   // --- window and focus --------------------------------------------------
 
@@ -683,6 +766,8 @@ export function CaptureWidget(): JSX.Element {
       }
       if (event.key === 'Escape') {
         event.preventDefault()
+        // Timing only. Lets the round trip be measured without writing rows.
+        void mark('escape pressed')
         if (current.kind === 'starting' || current.kind === 'noting') {
           dispatch({ type: 'dismiss' })
         } else if (
@@ -708,7 +793,10 @@ export function CaptureWidget(): JSX.Element {
   const lastMinute = left !== null && left <= LAST_MINUTE_S
 
   return (
-    <div className="widget" data-tauri-drag-region>
+    <div
+      className={state.kind === 'idle' || state.kind === 'offered' ? 'widget resting' : 'widget'}
+      data-tauri-drag-region
+    >
       {renderBody(state, now, lastMinute, shortcut, inputRef, onChange, onKeyDown)}
       {error !== null && <div className="error">{error}</div>}
       {playing && <div className="playing">♪</div>}
@@ -922,8 +1010,11 @@ function renderBody(
     case 'finished':
       return (
         <>
-          <div className="timer" data-tauri-drag-region>
-            0:00
+          <div className="timer-row" data-tauri-drag-region>
+            <span className="timer">0:00</span>
+            {state.written > 0 && (
+              <span className="ends">{fill(t.finishedWritten, { n: state.written })}</span>
+            )}
           </div>
           <div className="secondary" data-tauri-drag-region>
             {state.task}

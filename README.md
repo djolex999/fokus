@@ -15,7 +15,7 @@ You are working. A thought arrives — *reply to that email, check that invoice,
 
 **Capture.** The shortcut opens a one-line input whether or not a session is running. Enter saves it and hands focus back. In a session you see `return 3` for a second, outside one `written down`, then nothing. With no session running, Tab turns the same input into a session start: thought, then 25, 50 and 10 minutes. During a session, Tab switches to the task name instead, so a typo can be fixed without ending the session.
 
-**Review.** Everything you wrote down, triaged as *done*, *schedule* or *delete*.
+**Review.** Everything you wrote down, triaged as *done*, *schedule* or *delete*, by click or from the keyboard (↑↓ and one letter per action). Click a thought to fix its text. *Copy scheduled* puts everything marked schedule on the clipboard, dated, for a calendar or notes.
 
 **Come back.** Away for five minutes or more and the widget shows your task plus the last three things you captured, so you can pick up the thread without opening anything.
 
@@ -38,6 +38,8 @@ The Serbian rendering of the questionnaire is a translation, not the officially 
 **Windows**: download the `.msi` or `.exe` from [Releases](../../releases). The shortcut is `Ctrl+Shift+Space`.
 
 The build is **not signed or notarised**, so the first launch needs: right-click the app → Open, or System Settings → Privacy & Security → Open Anyway.
+
+**Hide instead of quitting.** The tray's *Hide until tomorrow* takes the widget off screen while the shortcut keeps working; it comes back after a long break (the Mac asleep three hours or more) or a day later. Quitting stops the shortcut until fokus is opened again.
 
 **Start it at login.** The shortcut only works while fokus is running, and it does not add itself to your login items: registering one makes macOS show a notification, and an app built to avoid interruptions should not cause one. Once, by hand:
 

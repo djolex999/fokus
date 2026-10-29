@@ -265,6 +265,22 @@ export async function resolveCapture(id: number, resolution: Resolution): Promis
   await conn.execute('UPDATE captures SET resolved = $1 WHERE id = $2', [resolution, id])
 }
 
+/** A capture's text, corrected from the review list. */
+export async function updateCaptureText(id: number, text: string): Promise<void> {
+  const conn = await db()
+  await conn.execute('UPDATE captures SET text = $1 WHERE id = $2', [text, id])
+}
+
+/** Everything marked scheduled, newest first, for copying out as text. */
+export async function scheduledCaptures(): Promise<Array<{ text: string; created_at: string }>> {
+  const conn = await db()
+  return conn.select<Array<{ text: string; created_at: string }>>(
+    `SELECT text, created_at FROM captures
+      WHERE resolved = 'scheduled'
+      ORDER BY created_at DESC, id DESC`,
+  )
+}
+
 /** A running session's task, corrected. Only the name changes: the timer runs
  *  from `started_at`, which is not touched. */
 export async function renameSession(sessionId: number, task: string): Promise<void> {

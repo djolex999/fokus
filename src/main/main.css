@@ -126,6 +126,57 @@ body {
   border-color: var(--dim);
 }
 
+/* Triage from the keyboard: the row the letter keys act on. A tint, not a
+   frame, so the list reads the same with the mouse. */
+.rows:focus {
+  outline: none;
+}
+
+.row.selected {
+  background: var(--raised);
+}
+
+.edit {
+  width: 100%;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg);
+  font: inherit;
+  line-height: 1.45;
+  padding: 2px 6px;
+  outline: none;
+}
+
+.header-action {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11.5px;
+  padding: 5px 11px;
+  border-radius: 5px;
+  cursor: default;
+}
+
+.header-action:hover {
+  color: var(--fg);
+  border-color: var(--dim);
+}
+
+.note {
+  color: var(--muted);
+  font-size: 13px;
+  padding-top: 12px;
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 11.5px;
+  padding-top: 14px;
+}
+
 .error {
   color: var(--error);
   font-size: 12px;

@@ -41,9 +41,17 @@ export async function setMenuLabels(labels: {
   musicPlay: string
   musicFolder: string
   backupsFolder: string
+  hideWidget: string
+  showWidget: string
   quit: string
 }): Promise<void> {
   await invoke('set_menu_labels', labels)
+}
+
+/** Hides or shows the widget for "Hide until tomorrow". Calling it again while
+ *  hidden re-hides after a capture brought the widget up. */
+export async function setWidgetHidden(hidden: boolean): Promise<void> {
+  await invoke('set_widget_hidden', { hidden })
 }
 
 /** Where `fileName` would go in ~/fokus/backups, or null if it already exists.

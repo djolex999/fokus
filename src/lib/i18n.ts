@@ -105,6 +105,18 @@ type Strings = {
   errNotPrinted: string
   /** A second clear inside the same minute, refused so nothing goes uncopied. */
   errBackupThisMinute: string
+  /** Finished widget, beside 0:00: how many thoughts the session caught. */
+  finishedWritten: string
+  /** Review list keys, matching the first letter of each action's label. */
+  keyDone: string
+  keySchedule: string
+  keyDelete: string
+  keyEdit: string
+  reviewKeysHint: string
+  copyScheduled: string
+  copiedScheduled: string
+  nothingScheduled: string
+  errNotCopied: string
   // printed page
   printRange: string
   printAsrsHeading: string
@@ -122,6 +134,9 @@ type Strings = {
   trayMusicPlay: string
   trayMusicFolder: string
   trayBackupsFolder: string
+  /** Hides the widget, shortcut still working, until a long break. */
+  trayHideWidget: string
+  trayShowWidget: string
   trayQuit: string
 }
 
@@ -181,6 +196,16 @@ const sr: Strings = {
   errNotDeleted: 'nije obrisano',
   errNotPrinted: 'štampanje se nije otvorilo',
   errBackupThisMinute: 'kopija iz ovog minuta već postoji, probaj za minut',
+  finishedWritten: '{n} zapisano',
+  keyDone: 'u',
+  keySchedule: 'z',
+  keyDelete: 'o',
+  keyEdit: 'i',
+  reviewKeysHint: '↑↓ biraš · u urađeno · z zakaži · o obriši · i izmeni',
+  copyScheduled: 'kopiraj zakazano',
+  copiedScheduled: 'kopirano: {n}',
+  nothingScheduled: 'ništa nije zakazano',
+  errNotCopied: 'nije kopirano',
   printRange: 'do',
   printAsrsHeading: 'ASRS v1.1, deo A',
   printNoAsrs: 'Upitnik nije popunjen.',
@@ -195,6 +220,8 @@ const sr: Strings = {
   trayMusicPlay: 'Pusti muziku',
   trayMusicFolder: 'Otvori folder s muzikom',
   trayBackupsFolder: 'Otvori folder s kopijama',
+  trayHideWidget: 'Sakrij do sutra',
+  trayShowWidget: 'Prikaži widget',
   trayQuit: 'Izađi',
 }
 
@@ -255,6 +282,16 @@ const en: Strings = {
   errNotDeleted: 'not deleted',
   errNotPrinted: 'printing did not open',
   errBackupThisMinute: 'a backup from this minute already exists, try again in a minute',
+  finishedWritten: '{n} written down',
+  keyDone: 'd',
+  keySchedule: 's',
+  keyDelete: 'x',
+  keyEdit: 'e',
+  reviewKeysHint: '↑↓ select · d done · s schedule · x delete · e edit',
+  copyScheduled: 'copy scheduled',
+  copiedScheduled: 'copied: {n}',
+  nothingScheduled: 'nothing scheduled',
+  errNotCopied: 'not copied',
   printRange: 'to',
   printAsrsHeading: 'ASRS v1.1, Part A',
   printNoAsrs: 'The questionnaire has not been filled in.',
@@ -269,6 +306,8 @@ const en: Strings = {
   trayMusicPlay: 'Play music',
   trayMusicFolder: 'Open music folder',
   trayBackupsFolder: 'Open backups folder',
+  trayHideWidget: 'Hide until tomorrow',
+  trayShowWidget: 'Show widget',
   trayQuit: 'Quit',
 }
 

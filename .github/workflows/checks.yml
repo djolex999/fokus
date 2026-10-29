@@ -33,6 +33,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: typecheck
         run: pnpm tsc --noEmit
+      - name: logic checks
+        run: pnpm run verify
       - name: build frontend
         run: pnpm exec vite build
       - name: rust tests

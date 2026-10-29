@@ -17,6 +17,12 @@ const CAPTURE_OPEN_EVENT: &str = "capture:open";
 const ABANDON_EVENT: &str = "session:abandon";
 const QUIT_EVENT: &str = "app:quit";
 const MUSIC_EVENT: &str = "audio:enabled";
+/// The tray asking the widget to hide or come back. The widget decides.
+const HIDE_TOGGLE_EVENT: &str = "widget:hide-toggle";
+/// Once a minute while the widget is hidden, so its reappear check runs even if
+/// WebKit has throttled or paused the hidden page's own timers.
+const PULSE_EVENT: &str = "widget:pulse";
+const PULSE_MS: u64 = 60_000;
 /// How long the widget gets to close out an in flight session before the app
 /// exits anyway. A failed write must not strand the user in an app that will
 /// not quit; the startup reconcile will catch whatever was missed.
@@ -40,6 +46,9 @@ struct TrayItems {
     music: MenuItem<tauri::Wry>,
     music_folder: MenuItem<tauri::Wry>,
     backups_folder: MenuItem<tauri::Wry>,
+    hide_widget: MenuItem<tauri::Wry>,
+    /// (hide, show). Which one shows depends on whether the widget is hidden.
+    hide_labels: Mutex<(String, String)>,
     /// (silence, play). Replaced by the widget once it knows the language.
     music_labels: Mutex<(String, String)>,
     quit: MenuItem<tauri::Wry>,
@@ -58,6 +67,9 @@ struct FokusState {
     /// which is worth more than saving one menu click on the rare day you need
     /// silence.
     music: Mutex<bool>,
+    /// "Hide until tomorrow" is on. The webview owns when it ends; Rust only
+    /// needs it to keep the pulse running and to label the tray item.
+    widget_hidden: Mutex<bool>,
 }
 
 fn log_since(t0: Instant, stage: &str) {
@@ -92,6 +104,13 @@ fn open_capture(app: &AppHandle) {
         eprintln!("[fokus] widget window is gone, cannot capture");
         return;
     };
+    // Hidden until tomorrow still captures: the widget comes up for this, and the
+    // webview hides it again once the capture is done.
+    if !widget.is_visible().unwrap_or(true) {
+        if let Err(e) = widget.show() {
+            eprintln!("[fokus] could not show hidden widget: {e}");
+        }
+    }
     // Order matters: activate the app, then make the widget key. Both are
     // queued onto the main thread and run in the order they are queued.
     focus::activate_self(app);
@@ -144,10 +163,14 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         true,
         None::<&str>,
     )?;
+    // Beside Quit on purpose: most quits mean "off my screen", and this does
+    // that while leaving the shortcut working. Quitting left it dead for weeks.
+    let hide_widget =
+        MenuItem::with_id(app, "hide_widget", "Sakrij do sutra", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Izađi", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&open, &abandon, &music, &music_folder, &backups_folder, &quit],
+        &[&open, &abandon, &music, &music_folder, &backups_folder, &hide_widget, &quit],
     )?;
     app.manage(TrayItems {
         open: open.clone(),
@@ -155,6 +178,8 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         music: music.clone(),
         music_folder: music_folder.clone(),
         backups_folder: backups_folder.clone(),
+        hide_widget: hide_widget.clone(),
+        hide_labels: Mutex::new(("Sakrij do sutra".into(), "Prikaži widget".into())),
         music_labels: Mutex::new(("Utišaj muziku".into(), "Pusti muziku".into())),
         quit: quit.clone(),
     });
@@ -211,6 +236,11 @@ fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     .and_then(|dir| open_folder(&dir));
                 if let Err(e) = opened {
                     eprintln!("[fokus] could not open the backups folder: {e}");
+                }
+            }
+            "hide_widget" => {
+                if let Err(e) = app.emit_to(WIDGET_LABEL, HIDE_TOGGLE_EVENT, ()) {
+                    eprintln!("[fokus] could not send hide toggle: {e}");
                 }
             }
             "abandon" => {
@@ -334,6 +364,8 @@ fn set_menu_labels(
     music_play: String,
     music_folder: String,
     backups_folder: String,
+    hide_widget: String,
+    show_widget: String,
     quit: String,
 ) -> Result<(), String> {
     let items = app.state::<TrayItems>();
@@ -341,6 +373,12 @@ fn set_menu_labels(
     items.abandon.set_text(abandon).map_err(|e| e.to_string())?;
     items.music_folder.set_text(music_folder).map_err(|e| e.to_string())?;
     items.backups_folder.set_text(backups_folder).map_err(|e| e.to_string())?;
+    let hidden = *app.state::<FokusState>().widget_hidden.lock().map_err(|e| e.to_string())?;
+    items
+        .hide_widget
+        .set_text(if hidden { &show_widget } else { &hide_widget })
+        .map_err(|e| e.to_string())?;
+    *items.hide_labels.lock().map_err(|e| e.to_string())? = (hide_widget, show_widget);
     items.quit.set_text(quit).map_err(|e| e.to_string())?;
 
     // Whichever label is showing depends on whether the music is currently on,
@@ -365,6 +403,59 @@ fn reset_music(app: AppHandle, state: State<'_, FokusState>) -> Result<(), Strin
         .music
         .set_text(silence)
         .map_err(|e| format!("could not update the music item: {e}"))
+}
+
+/// Shows or hides the widget for "Hide until tomorrow". Idempotent: the webview
+/// calls it again to re-hide after a capture brought the widget up, and only the
+/// first call of a hidden spell relabels the tray and starts the pulse.
+///
+/// The pulse is the one piece of timing on this side, and it is a clock, not a
+/// decision: when to come back is decided in the webview (`shouldReappear`).
+/// It exists because a hidden page's timers may be throttled or paused by
+/// WebKit, and a check that never runs would leave the widget gone for good.
+#[tauri::command]
+fn set_widget_hidden(app: AppHandle, hidden: bool) -> Result<(), String> {
+    let widget = app.get_webview_window(WIDGET_LABEL).ok_or("widget window is gone")?;
+    let was = {
+        let state = app.state::<FokusState>();
+        let mut flag = state.widget_hidden.lock().map_err(|e| e.to_string())?;
+        let was = *flag;
+        *flag = hidden;
+        was
+    };
+    if hidden {
+        widget.hide().map_err(|e| e.to_string())?;
+    } else {
+        widget.show().map_err(|e| e.to_string())?;
+    }
+    if was == hidden {
+        return Ok(());
+    }
+    let items = app.state::<TrayItems>();
+    let labels = items.hide_labels.lock().map_err(|e| e.to_string())?;
+    items
+        .hide_widget
+        .set_text(if hidden { &labels.1 } else { &labels.0 })
+        .map_err(|e| e.to_string())?;
+    if hidden {
+        let handle = app.clone();
+        std::thread::spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_millis(PULSE_MS));
+            let still = handle
+                .state::<FokusState>()
+                .widget_hidden
+                .lock()
+                .map(|flag| *flag)
+                .unwrap_or(false);
+            if !still {
+                break;
+            }
+            if let Err(e) = handle.emit_to(WIDGET_LABEL, PULSE_EVENT, ()) {
+                eprintln!("[fokus] could not send pulse: {e}");
+            }
+        });
+    }
+    Ok(())
 }
 
 /// Opens the system print dialog for the window that asked.
@@ -491,7 +582,8 @@ pub fn run() {
             set_widget_height,
             backup::backup_target,
             backup::prune_backups,
-            print_page
+            print_page,
+            set_widget_hidden
         ])
         .setup(|app| {
             // A normal application, on purpose. The widget window carries

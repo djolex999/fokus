@@ -1306,3 +1306,43 @@ that this app is never the reason for an interruption. A setting to control it
 is forbidden too. So README explains adding it by hand, once, on both
 platforms, and says why. The cost is real: until the user does it, every
 restart leaves the shortcut dead until fokus is opened.
+
+## Two batches from the brainstorm
+
+2026-10-29. Prompted by 24 days with fokus closed and forgotten: the Mac had not
+restarted since 9 September, so it was quit, not lost to a reboot, and the
+shortcut was dead the whole time.
+
+**`npm run verify`.** The node checks rebuilt four times in a month and deleted
+each time are now committed: reducer, selection rule, reappear rule, statistics,
+and clear history's backup guarantee against stand-ins that fail on command. No
+test runner; the project's own tsc compiles the modules into a temp directory.
+91 checks, run in CI on both platforms. Proven able to fail: lowering the 90%
+threshold to 80% failed exactly the boundary case and exited 1.
+
+**Hide until tomorrow.** Beside Quit in the tray. Hides the widget; the shortcut
+still captures (Rust shows the widget for it, the webview hides it again once it
+rests). Comes back after a long break, the Mac asleep three hours or more, or
+24 hours after hiding, decided by `shouldReappear`. Not a fixed hour: sessions
+here run at night as often as by day. While hidden, Rust sends a pulse once a
+minute, a clock only, because WebKit may throttle or pause a hidden page's
+timers, and a check that never ran would leave the widget gone for good.
+
+**Review list from the keyboard.** ↑↓ and one letter per action, the letter
+being the first of the label in the current language (u/z/o in Serbian, d/s/x
+in English, x because d is taken). Edit in place; Escape cancels through a ref,
+because the field also saves on blur and a blur during unmount would otherwise
+save what Escape discarded. Copy scheduled uses the webview clipboard with the
+selection-copy fallback, no plugin.
+
+**Finished says how many were written down,** read with `countCaptures` as the
+session ends. Guarded, because the timer calls finish every tick at zero and the
+count is an await. **The idle widget fades** to 45%, full on hover, no
+transition.
+
+**Not built: undo the last capture.** After Enter, focus is back in the other
+app, so Cmd+Z goes there. The only other trigger, the shortcut again within a
+few seconds, would take the next real thought.
+
+**Unverified by hand at commit:** the round trip (measurement set up, no runs
+yet), hiding, the review list keys, copy, the fade.
