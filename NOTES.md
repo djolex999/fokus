@@ -1380,3 +1380,11 @@ compares against a fixed shortcut: only one is ever registered.
 Checked: 115 node checks (54 reducer, 14 selection, 11 shortcut among them), 11
 Rust tests (label matches the docs, the stored form reads back, modifier rule).
 Not exercised by hand: any of the three, or the earlier batch.
+
+## `git add -A` committed a block that was not ours
+
+2026-10-29. For three weeks the Vir tool's block in CLAUDE.md was deliberately
+left uncommitted, staged around by hand. Then a commit used `git add -A` and
+took it with everything else. Harmless here, but the habit is the problem: with
+someone else's change sitting in the tree, stage paths explicitly, or check
+`git diff --cached --stat` against what you meant to commit before committing.
