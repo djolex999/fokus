@@ -41,7 +41,7 @@ The build is **not signed or notarised**, so the first launch needs: right-click
 
 **Start it at login.** The shortcut only works while fokus is running, and it does not add itself to your login items: registering one makes macOS show a notification, and an app built to avoid interruptions should not cause one. Once, by hand:
 
-- **macOS**: System Settings → General → Login Items → **+** under "Open at Login" → choose fokus.
+- **macOS**: System Settings → General → Login Items & Extensions (just Login Items before macOS 15) → **+** under "Open at Login" → choose fokus.
 - **Windows**: press Win+R, type `shell:startup`, Enter, and put a shortcut to fokus in the folder that opens.
 
 ## Build it yourself
